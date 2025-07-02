@@ -1,0 +1,5 @@
+{
+  "name": "Intelligent Knowledge Distiller",
+  "description": "An application to transform unstructured data like emails or support tickets into a structured, synthesized knowledge base using a multi-agent AI system, inspired by the paper 'From Unstructured Communication to Intelligent RAG'.",
+  "requestFramePermissions": []
+}
