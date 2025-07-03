@@ -1,13 +1,13 @@
 
 import React, { useState, useCallback } from 'react';
 import { LLMProvider, ProcessingState, Category, KnowledgeArticle } from './types';
+import { LLMServiceFactory } from './services';
 import { Header } from './components/Header';
 import { InputSection } from './components/InputSection';
 import { OrchestratorSection } from './components/OrchestratorSection';
 import { OutputSection } from './components/OutputSection';
 import { SettingsModal } from './components/SettingsModal';
 import { Toast } from './components/ui/Toast';
-import { discoverCategories, categorizeTickets, synthesizeKnowledge } from './services/geminiService';
 import { DEFAULT_RAW_TEXT, DEFAULT_SEPARATOR } from './constants';
 
 const App: React.FC = () => {
@@ -25,8 +25,14 @@ const App: React.FC = () => {
     const [progress, setProgress] = useState({ current: 0, total: 0, task: '' });
 
     const handleProcess = useCallback(async () => {
-        if (!process.env.API_KEY) {
-            setError("API_KEY environment variable not set. Please configure it to use the AI features.");
+        if (llmProvider === LLMProvider.GEMINI && !process.env.GEMINI_API_KEY) {
+            setError("GEMINI_API_KEY environment variable not set. Please configure it in .env.local to use the Gemini API.");
+            setProcessingState(ProcessingState.ERROR);
+            return;
+        }
+        
+        if (llmProvider === LLMProvider.OPENAI && !process.env.OPENAI_API_KEY) {
+            setError("OPENAI_API_KEY environment variable not set. Please configure it in .env.local to use the OpenAI API.");
             setProcessingState(ProcessingState.ERROR);
             return;
         }
@@ -34,7 +40,6 @@ const App: React.FC = () => {
         setError(null);
         setCategories([]);
         setKnowledgeArticles([]);
-        setCategorizedData(new Map());
 
         const tickets = rawData.split(separator).map(t => t.trim()).filter(t => t.length > 0);
         if (tickets.length === 0) {
@@ -44,17 +49,19 @@ const App: React.FC = () => {
         }
 
         try {
+            const llmService = LLMServiceFactory.getService(llmProvider);
+
             // Step 1: Discover Categories
             setProcessingState(ProcessingState.DISCOVERING);
             setProgress({ current: 0, total: 1, task: 'Discovering categories...' });
-            const discoveredCategories = await discoverCategories(tickets, llmProvider);
+            const discoveredCategories = await llmService.discoverCategories(tickets);
             setCategories(discoveredCategories);
             setProgress({ current: 1, total: 1, task: 'Categories discovered!' });
 
             // Step 2: Categorize Tickets
             setProcessingState(ProcessingState.CATEGORIZING);
             setProgress({ current: 0, total: tickets.length, task: 'Categorizing tickets...' });
-            const ticketCategories = await categorizeTickets(tickets, discoveredCategories, llmProvider, (i) => {
+            const ticketCategories = await llmService.categorizeTickets(tickets, discoveredCategories, (i) => {
                  setProgress({ current: i + 1, total: tickets.length, task: 'Categorizing tickets...' });
             });
             
@@ -83,7 +90,7 @@ const App: React.FC = () => {
                 
                 setProgress({ current: i + 1, total: categoriesToProcess.length, task: `Synthesizing: ${categoryName}` });
                 
-                const markdownContent = await synthesizeKnowledge(categoryName, description, categoryTickets, llmProvider);
+                const markdownContent = await llmService.synthesizeKnowledge(categoryName, description, categoryTickets);
                 articles.push({ categoryName, markdownContent });
             }
             setKnowledgeArticles(articles);

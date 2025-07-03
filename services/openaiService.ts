@@ -1,10 +1,10 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import OpenAI from "openai";
 import { Category, CategorizedTicketResult } from '../types';
 import { LLMService } from './llmService';
 import { getCategoryDiscoveryPrompt, getTicketCategorizationPrompt, getKnowledgeSynthesisPrompt } from '../constants';
 
-if (!process.env.GEMINI_API_KEY) {
-    console.warn("GEMINI_API_KEY environment variable not set. The application will not be able to connect to the Gemini API.");
+if (!process.env.OPENAI_API_KEY) {
+    console.warn("OPENAI_API_KEY environment variable not set. The application will not be able to connect to the OpenAI API.");
 }
 
 const parseJsonResponse = <T,>(text: string): T => {
@@ -22,13 +22,16 @@ const parseJsonResponse = <T,>(text: string): T => {
     }
 };
 
-export class GeminiService implements LLMService {
-    private client: GoogleGenAI;
-
+export class OpenAIService implements LLMService {
+    private client: OpenAI;
+    
     constructor() {
-        this.client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+        this.client = new OpenAI({ 
+            apiKey: process.env.OPENAI_API_KEY || "",
+            dangerouslyAllowBrowser: true
+        });
     }
-
+    
     async discoverCategories(tickets: string[]): Promise<Category[]> {
         // Use a sample of tickets to avoid overly large prompts
         const sampleSize = Math.min(tickets.length, 100);
@@ -36,23 +39,22 @@ export class GeminiService implements LLMService {
         
         const prompt = getCategoryDiscoveryPrompt(ticketSample);
         
-        const response: GenerateContentResponse = await this.client.models.generateContent({
-            model: 'gemini-2.5-flash-preview-04-17',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                temperature: 0.2,
-            }
+        const response = await this.client.chat.completions.create({
+            model: "gpt-4.1-nano",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" }
         });
-
-        const text = response.text || '';
-        const parsed = parseJsonResponse<{ categories: Category[] }>(text);
+        
+        const content = response.choices[0]?.message.content || "";
+        const parsed = parseJsonResponse<{ categories: Category[] }>(content);
+        
         if (!parsed || !Array.isArray(parsed.categories)) {
             throw new Error("Failed to discover categories. The AI response was malformed.");
         }
+        
         return parsed.categories;
     }
-
+    
     async categorizeTickets(
         tickets: string[], 
         categories: Category[], 
@@ -63,16 +65,16 @@ export class GeminiService implements LLMService {
         const promises = tickets.map(async (ticket, index) => {
             try {
                 const prompt = getTicketCategorizationPrompt(ticket, categoryList);
-                const response: GenerateContentResponse = await this.client.models.generateContent({
-                    model: 'gemini-2.5-flash-preview-04-17',
-                    contents: prompt,
-                    config: {
-                        responseMimeType: "application/json",
-                        temperature: 0.1,
-                    }
+                
+                const response = await this.client.chat.completions.create({
+                    model: "gpt-4",
+                    messages: [{ role: "user", content: prompt }],
+                    response_format: { type: "json_object" }
                 });
-                const text = response.text || '';
-                const parsed = parseJsonResponse<{ assignments: CategorizedTicketResult[] }>(text);
+                
+                const content = response.choices[0]?.message.content || "";
+                const parsed = parseJsonResponse<{ assignments: CategorizedTicketResult[] }>(content);
+                
                 onProgress(index);
                 return parsed.assignments || null;
             } catch (e) {
@@ -81,10 +83,10 @@ export class GeminiService implements LLMService {
                 return null; // Return null on error for this specific ticket
             }
         });
-
+        
         return Promise.all(promises);
     }
-
+    
     async synthesizeKnowledge(
         categoryName: string, 
         categoryDescription: string, 
@@ -92,14 +94,11 @@ export class GeminiService implements LLMService {
     ): Promise<string> {
         const prompt = getKnowledgeSynthesisPrompt(categoryName, categoryDescription, tickets);
         
-        const response: GenerateContentResponse = await this.client.models.generateContent({
-            model: 'gemini-2.5-flash-preview-04-17',
-            contents: prompt,
-            config: {
-                temperature: 0.5,
-            }
+        const response = await this.client.chat.completions.create({
+            model: "gpt-4",
+            messages: [{ role: "user", content: prompt }]
         });
         
-        return response.text || '';
+        return response.choices[0]?.message.content || "";
     }
 }

@@ -1,7 +1,7 @@
 
 export enum LLMProvider {
   GEMINI = 'Gemini',
-  OPENAI = 'OpenAI (Not Implemented)',
+  OPENAI = 'OpenAI',
 }
 
 export interface Category {

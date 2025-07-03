@@ -36,7 +36,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, p
                                 </option>
                             ))}
                         </Select>
-                        <p className="text-xs text-gray-500 mt-2">Currently, only the Gemini provider is implemented.</p>
+                        <p className="text-xs text-gray-500 mt-2">Select your preferred AI model provider.</p>
                     </div>
                 </div>
                  <div className="p-4 bg-gray-900/50 rounded-b-lg flex justify-end">
