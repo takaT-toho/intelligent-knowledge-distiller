@@ -25,10 +25,11 @@ const parseJsonResponse = <T,>(text: string): T => {
 export class OpenAIService implements LLMService {
     private client: OpenAI;
     
-    constructor() {
+    constructor(baseURL?: string) {
         this.client = new OpenAI({ 
             apiKey: process.env.OPENAI_API_KEY || "",
-            dangerouslyAllowBrowser: true
+            dangerouslyAllowBrowser: true,
+            baseURL: baseURL || "https://api.openai.com/v1"
         });
     }
     
@@ -67,7 +68,7 @@ export class OpenAIService implements LLMService {
                 const prompt = getTicketCategorizationPrompt(ticket, categoryList);
                 
                 const response = await this.client.chat.completions.create({
-                    model: "gpt-4",
+                    model: "gpt-4.1-nano",
                     messages: [{ role: "user", content: prompt }],
                     response_format: { type: "json_object" }
                 });
@@ -95,7 +96,7 @@ export class OpenAIService implements LLMService {
         const prompt = getKnowledgeSynthesisPrompt(categoryName, categoryDescription, tickets);
         
         const response = await this.client.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-4.1-nano",
             messages: [{ role: "user", content: prompt }]
         });
         

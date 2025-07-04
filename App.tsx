@@ -23,6 +23,7 @@ const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const [progress, setProgress] = useState({ current: 0, total: 0, task: '' });
+    const [openaiBaseUrl, setOpenaiBaseUrl] = useState<string>("https://api.openai.com/v1");
 
     const handleProcess = useCallback(async () => {
         if (llmProvider === LLMProvider.GEMINI && !process.env.GEMINI_API_KEY) {
@@ -49,7 +50,9 @@ const App: React.FC = () => {
         }
 
         try {
-            const llmService = LLMServiceFactory.getService(llmProvider);
+            const llmService = LLMServiceFactory.getService(llmProvider, {
+                baseURL: llmProvider === LLMProvider.OPENAI ? openaiBaseUrl : undefined
+            });
 
             // Step 1: Discover Categories
             setProcessingState(ProcessingState.DISCOVERING);
@@ -102,7 +105,7 @@ const App: React.FC = () => {
             setError(e instanceof Error ? e.message : 'An unknown error occurred.');
             setProcessingState(ProcessingState.ERROR);
         }
-    }, [rawData, separator, llmProvider]);
+    }, [rawData, separator, llmProvider, openaiBaseUrl]);
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-200 font-sans">
@@ -135,6 +138,8 @@ const App: React.FC = () => {
                 onClose={() => setIsSettingsOpen(false)}
                 provider={llmProvider}
                 setProvider={setLlmProvider}
+                openaiBaseUrl={openaiBaseUrl}
+                setOpenaiBaseUrl={setOpenaiBaseUrl}
             />
             {error && <Toast message={error} onClose={() => setError(null)} />}
         </div>
