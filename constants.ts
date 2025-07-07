@@ -27,6 +27,7 @@ ${tickets.join('\n\n')}
 
 # Task
 Create a taxonomy of knowledge categories based ONLY on these sample tickets.
+
 For each category:
 1. Provide a clear, concise name to capture the essence of the issue type (5 words or less).
 2. Write a brief description of what this category encompasses (50 words or less).
@@ -35,11 +36,15 @@ For each category:
 # Important Guidelines
 1. Focus ONLY on categories that are ACTUALLY REPRESENTED in the sample tickets.
 2. Categories should be based on the nature of the problem, not just surface details.
-3. The number of categories should reflect the diversity in the sample. DO NOT create more categories than justified by the samples.
-4. DO NOT use your general knowledge about supply chain systems to invent categories, rely ONLY on what's in the data.
+3. Categories should be distinct from each other with minimal overlap.
+4. The number of categories should reflect the diversity in the sample. DO NOT create more categories than justified by the samples.
+5. Be extremely concise with category names and description, and use short keywords for identifying patterns.
+6. DO NOT create categories for general organizational content that isn’t an actual problem.
+7. DO NOT use your general knowledge about supply chain systems to invent categories, rely ONLY on what's in the data.
 
 # Output Format
 Return a JSON structure:
+
 {
   "categories": [
     {
@@ -56,16 +61,19 @@ export const getTicketCategorizationPrompt = (ticket: string, categories: string
 You are categorizing a supply chain ticket into predefined knowledge categories.
 
 # Ticket Information
-${ticket}
+Title: ${ticket}
+Description: ${description}
 
 # Available Categories
 ${categories}
 
 # Task
-Assign this ticket to the most appropriate category from the list. If the ticket clearly fits multiple categories, you may assign it to up to 2 categories.
+Assign this ticket to the most appropriate category from the list. 
+If the ticket clearly fits multiple categories, you may assign it to up to 2 categories.
 
 # Output Format
 Return a JSON structure:
+
 {
   "assignments": [
     {
@@ -74,6 +82,7 @@ Return a JSON structure:
     }
   ]
 }
+
 If no categories are clearly applicable, return an empty assignments array.
 `;
 
@@ -93,9 +102,10 @@ Create a CONCISE knowledge article that contains ONLY information directly suppo
 # Important Requirements
 1. Use ONLY information explicitly mentioned in the ticket data.
 2. DO NOT expand acronyms unless they are expanded in the tickets themselves.
-3. DO NOT invent processes or best practices not mentioned in tickets.
-4. Keep the article SHORT and FOCUSED.
-5. Write in a direct style addressing ticket creators.
+3. DO NOT make up definitions for systems if not provided in the data.
+4. DO NOT invent processes or best practices not mentioned in tickets.
+5. Keep the article SHORT and FOCUSED - aim for 50% less content than you might typically write.
+6. Write in a direct style addressing ticket creators.
 
 # Focus on
 1. Common issues seen in these tickets (briefly).
@@ -104,6 +114,7 @@ Create a CONCISE knowledge article that contains ONLY information directly suppo
 
 # Output Format
 Your response should be a concise markdown document with:
+
 1. Title: A brief descriptive title for the category "${categoryName}".
 2. Common Issues: 2-3 bullet points of the main issues (be brief).
 3. Tips for Resolution: Specific advice based ONLY on what worked in the tickets.
