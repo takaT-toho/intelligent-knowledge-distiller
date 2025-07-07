@@ -10,14 +10,18 @@
   },
   "dependencies": {
     "@google/genai": "^1.8.0",
+    "i18next": "^25.3.1",
+    "i18next-http-backend": "^3.0.2",
     "openai": "^5.8.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-i18next": "^15.6.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/react-dom": "^19.1.6",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   }

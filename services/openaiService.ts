@@ -1,3 +1,4 @@
+import { TFunction } from 'i18next';
 import OpenAI from "openai";
 import { Category, SubCategory, CategorizedTicketResult, SubCategorizedTicketResult } from '../types';
 import { LLMService } from './llmService';
@@ -39,12 +40,12 @@ export class OpenAIService implements LLMService {
         });
     }
     
-    async discoverCategories(tickets: string[]): Promise<Category[]> {
+    async discoverCategories(t: TFunction, tickets: string[]): Promise<Category[]> {
         // Use a sample of tickets to avoid overly large prompts
         const sampleSize = Math.min(tickets.length, 100);
         const ticketSample = tickets.slice(0, sampleSize);
         
-        const prompt = getCategoryDiscoveryPrompt(ticketSample);
+        const prompt = getCategoryDiscoveryPrompt(t, ticketSample);
         
         const response = await this.client.chat.completions.create({
             model: "gpt-4.1-nano",
@@ -63,6 +64,7 @@ export class OpenAIService implements LLMService {
     }
     
     async categorizeTickets(
+        t: TFunction,
         tickets: string[], 
         categories: Category[], 
         onProgress: (index: number) => void
@@ -72,7 +74,7 @@ export class OpenAIService implements LLMService {
         const promises = tickets.map(async (ticket, index) => {
             const [title, description] = ticket.split('\nDescription: ');
             try {
-                const prompt = getTicketCategorizationPrompt(title.replace('Title: ', ''), description, categoryList);
+                const prompt = getTicketCategorizationPrompt(t, title.replace('Title: ', ''), description, categoryList);
                 
                 const response = await this.client.chat.completions.create({
                     model: "gpt-4.1-nano",
@@ -96,11 +98,12 @@ export class OpenAIService implements LLMService {
     }
     
     async synthesizeKnowledge(
+        t: TFunction,
         categoryName: string, 
         categoryDescription: string, 
         tickets: string[]
     ): Promise<string> {
-        const prompt = getKnowledgeSynthesisPrompt(categoryName, categoryDescription, tickets);
+        const prompt = getKnowledgeSynthesisPrompt(t, categoryName, categoryDescription, tickets);
         
         const response = await this.client.chat.completions.create({
             model: "gpt-4.1-nano",
@@ -111,6 +114,7 @@ export class OpenAIService implements LLMService {
     }
 
     async discoverSubcategories(
+        t: TFunction,
         parentCategoryName: string,
         parentCategoryDescription: string,
         tickets: string[]
@@ -118,7 +122,7 @@ export class OpenAIService implements LLMService {
         const sampleSize = Math.min(tickets.length, 100);
         const ticketSample = tickets.slice(0, sampleSize).join('\n\n---\n\n');
 
-        const prompt = getSubcategoryDiscoveryPrompt(parentCategoryName, parentCategoryDescription, ticketSample);
+        const prompt = getSubcategoryDiscoveryPrompt(t, parentCategoryName, parentCategoryDescription, ticketSample);
 
         const response = await this.client.chat.completions.create({
             model: "gpt-4.1-nano",
@@ -137,6 +141,7 @@ export class OpenAIService implements LLMService {
     }
 
     async categorizeToSubcategories(
+        t: TFunction,
         tickets: string[],
         parentCategoryName: string,
         parentCategoryDescription: string,
@@ -149,6 +154,7 @@ export class OpenAIService implements LLMService {
             const [title, description] = ticket.split('\nDescription: ');
             try {
                 const prompt = getSubcategoryCategorizationPrompt(
+                    t,
                     title.replace('Title: ', ''),
                     description,
                     parentCategoryName,

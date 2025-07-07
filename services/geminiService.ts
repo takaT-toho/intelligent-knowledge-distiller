@@ -1,3 +1,4 @@
+import { TFunction } from 'i18next';
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Category, SubCategory, CategorizedTicketResult, SubCategorizedTicketResult } from '../types';
 import { LLMService } from './llmService';
@@ -35,12 +36,12 @@ export class GeminiService implements LLMService {
         this.client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
     }
 
-    async discoverCategories(tickets: string[]): Promise<Category[]> {
+    async discoverCategories(t: TFunction, tickets: string[]): Promise<Category[]> {
         // Use a sample of tickets to avoid overly large prompts
         const sampleSize = Math.min(tickets.length, 100);
         const ticketSample = tickets.slice(0, sampleSize);
         
-        const prompt = getCategoryDiscoveryPrompt(ticketSample);
+        const prompt = getCategoryDiscoveryPrompt(t, ticketSample);
         
         const response: GenerateContentResponse = await this.client.models.generateContent({
             model: 'gemini-2.5-flash-preview-04-17',
@@ -60,6 +61,7 @@ export class GeminiService implements LLMService {
     }
 
     async categorizeTickets(
+        t: TFunction,
         tickets: string[], 
         categories: Category[], 
         onProgress: (index: number) => void
@@ -69,7 +71,7 @@ export class GeminiService implements LLMService {
         const promises = tickets.map(async (ticket, index) => {
             const [title, description] = ticket.split('\nDescription: ');
             try {
-                const prompt = getTicketCategorizationPrompt(title.replace('Title: ', ''), description, categoryList);
+                const prompt = getTicketCategorizationPrompt(t, title.replace('Title: ', ''), description, categoryList);
                 const response: GenerateContentResponse = await this.client.models.generateContent({
                     model: 'gemini-2.5-flash-preview-04-17',
                     contents: prompt,
@@ -93,11 +95,12 @@ export class GeminiService implements LLMService {
     }
 
     async synthesizeKnowledge(
+        t: TFunction,
         categoryName: string, 
         categoryDescription: string, 
         tickets: string[]
     ): Promise<string> {
-        const prompt = getKnowledgeSynthesisPrompt(categoryName, categoryDescription, tickets);
+        const prompt = getKnowledgeSynthesisPrompt(t, categoryName, categoryDescription, tickets);
         
         const response: GenerateContentResponse = await this.client.models.generateContent({
             model: 'gemini-2.5-flash-preview-04-17',
@@ -111,6 +114,7 @@ export class GeminiService implements LLMService {
     }
 
     async discoverSubcategories(
+        t: TFunction,
         parentCategoryName: string,
         parentCategoryDescription: string,
         tickets: string[]
@@ -118,7 +122,7 @@ export class GeminiService implements LLMService {
         const sampleSize = Math.min(tickets.length, 100);
         const ticketSample = tickets.slice(0, sampleSize).join('\n\n---\n\n');
 
-        const prompt = getSubcategoryDiscoveryPrompt(parentCategoryName, parentCategoryDescription, ticketSample);
+        const prompt = getSubcategoryDiscoveryPrompt(t, parentCategoryName, parentCategoryDescription, ticketSample);
 
         const response: GenerateContentResponse = await this.client.models.generateContent({
             model: 'gemini-2.5-flash-preview-04-17',
@@ -138,6 +142,7 @@ export class GeminiService implements LLMService {
     }
 
     async categorizeToSubcategories(
+        t: TFunction,
         tickets: string[],
         parentCategoryName: string,
         parentCategoryDescription: string,
@@ -150,6 +155,7 @@ export class GeminiService implements LLMService {
             const [title, description] = ticket.split('\nDescription: ');
             try {
                 const prompt = getSubcategoryCategorizationPrompt(
+                    t,
                     title.replace('Title: ', ''),
                     description,
                     parentCategoryName,

@@ -1,5 +1,6 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { LLMProvider, ProcessingState, Category, KnowledgeArticle } from './types';
 import { LLMServiceFactory } from './services';
 import { Header } from './components/Header';
@@ -8,10 +9,11 @@ import { OrchestratorSection } from './components/OrchestratorSection';
 import { OutputSection } from './components/OutputSection';
 import { SettingsModal } from './components/SettingsModal';
 import { Toast } from './components/ui/Toast';
-import { DEFAULT_RAW_TEXT, DEFAULT_SEPARATOR, SUBCATEGORY_THRESHOLD } from './constants';
+import { DEFAULT_SEPARATOR, SUBCATEGORY_THRESHOLD } from './constants';
 
 const App: React.FC = () => {
-    const [rawData, setRawData] = useState<string>(DEFAULT_RAW_TEXT);
+    const { t, i18n } = useTranslation();
+    const [rawData, setRawData] = useState<string>(t('sampleText'));
     const [separator, setSeparator] = useState<string>(DEFAULT_SEPARATOR);
     const [llmProvider, setLlmProvider] = useState<LLMProvider>(LLMProvider.GEMINI);
     const [processingState, setProcessingState] = useState<ProcessingState>(ProcessingState.IDLE);
@@ -24,6 +26,10 @@ const App: React.FC = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const [progress, setProgress] = useState({ current: 0, total: 0, task: '' });
     const [openaiBaseUrl, setOpenaiBaseUrl] = useState<string>("https://api.openai.com/v1");
+
+    useEffect(() => {
+        setRawData(t('sampleText'));
+    }, [i18n.language, t]);
 
     const handleProcess = useCallback(async () => {
         if (llmProvider === LLMProvider.GEMINI && !process.env.GEMINI_API_KEY) {
@@ -56,16 +62,16 @@ const App: React.FC = () => {
 
             // Step 1: Discover Categories
             setProcessingState(ProcessingState.DISCOVERING);
-            setProgress({ current: 0, total: 1, task: 'Discovering categories...' });
-            const discoveredCategories = await llmService.discoverCategories(tickets);
+            setProgress({ current: 0, total: 1, task: t('progress.discovering') });
+            const discoveredCategories = await llmService.discoverCategories(t, tickets);
             setCategories(discoveredCategories);
-            setProgress({ current: 1, total: 1, task: 'Categories discovered!' });
+            setProgress({ current: 1, total: 1, task: t('progress.categoriesDiscovered') });
 
             // Step 2: Categorize Tickets
             setProcessingState(ProcessingState.CATEGORIZING);
-            setProgress({ current: 0, total: tickets.length, task: 'Categorizing tickets...' });
-            const ticketCategories = await llmService.categorizeTickets(tickets, discoveredCategories, (i) => {
-                 setProgress({ current: i + 1, total: tickets.length, task: 'Categorizing tickets...' });
+            setProgress({ current: 0, total: tickets.length, task: t('progress.categorizing') });
+            const ticketCategories = await llmService.categorizeTickets(t, tickets, discoveredCategories, (i) => {
+                 setProgress({ current: i + 1, total: tickets.length, task: t('progress.categorizing') });
             });
             
             const newCategorizedData = new Map<string, string[]>();
@@ -79,28 +85,28 @@ const App: React.FC = () => {
                 }
             });
             setCategorizedData(newCategorizedData);
-            setProgress({ current: tickets.length, total: tickets.length, task: 'Categorization complete!' });
+            setProgress({ current: tickets.length, total: tickets.length, task: t('progress.categorizationComplete') });
 
             // Step 3: Synthesize Knowledge
             setProcessingState(ProcessingState.SYNTHESIZING);
             const categoriesToProcess = Array.from(newCategorizedData.keys());
-            setProgress({ current: 0, total: categoriesToProcess.length, task: 'Synthesizing knowledge...' });
+            setProgress({ current: 0, total: categoriesToProcess.length, task: t('progress.synthesizing') });
             const articles: KnowledgeArticle[] = [];
             for (let i = 0; i < categoriesToProcess.length; i++) {
                 const categoryName = categoriesToProcess[i];
                 const categoryTickets = newCategorizedData.get(categoryName) || [];
                 const description = discoveredCategories.find(c => c.name === categoryName)?.description || '';
                 
-                setProgress({ current: i + 1, total: categoriesToProcess.length, task: `Processing: ${categoryName}` });
+                setProgress({ current: i + 1, total: categoriesToProcess.length, task: t('progress.processing', { categoryName }) });
 
                 if (categoryTickets.length > SUBCATEGORY_THRESHOLD) {
                     // Sub-category discovery and synthesis for large categories
-                    setProgress({ current: i + 1, total: categoriesToProcess.length, task: `Discovering subcategories for: ${categoryName}` });
-                    const subcategories = await llmService.discoverSubcategories(categoryName, description, categoryTickets);
+                    setProgress({ current: i + 1, total: categoriesToProcess.length, task: t('progress.discoveringSub', { categoryName }) });
+                    const subcategories = await llmService.discoverSubcategories(t, categoryName, description, categoryTickets);
 
                     if (subcategories.length > 0) {
-                        setProgress({ current: i + 1, total: categoriesToProcess.length, task: `Categorizing into subcategories for: ${categoryName}` });
-                        const subTicketCategories = await llmService.categorizeToSubcategories(categoryTickets, categoryName, description, subcategories, () => {});
+                        setProgress({ current: i + 1, total: categoriesToProcess.length, task: t('progress.categorizingSub', { categoryName }) });
+                        const subTicketCategories = await llmService.categorizeToSubcategories(t, categoryTickets, categoryName, description, subcategories, () => {});
                         
                         const subCategorizedData = new Map<string, string[]>();
                         subTicketCategories.forEach((subCats, ticketIndex) => {
@@ -118,24 +124,24 @@ const App: React.FC = () => {
                             const subCategoryTickets = subCategorizedData.get(subCategoryName) || [];
                             const subCategoryDescription = subcategories.find(sc => sc.name === subCategoryName)?.description || '';
                             
-                            setProgress({ current: i + 1, total: categoriesToProcess.length, task: `Synthesizing: ${categoryName} > ${subCategoryName}` });
+                            setProgress({ current: i + 1, total: categoriesToProcess.length, task: t('progress.synthesizingSub', { categoryName, subCategoryName }) });
                             
-                            const markdownContent = await llmService.synthesizeKnowledge(subCategoryName, subCategoryDescription, subCategoryTickets);
+                            const markdownContent = await llmService.synthesizeKnowledge(t, subCategoryName, subCategoryDescription, subCategoryTickets);
                             articles.push({ categoryName: `${categoryName} > ${subCategoryName}`, markdownContent });
                         }
                     } else {
                         // If no subcategories are found, process the main category
-                        const markdownContent = await llmService.synthesizeKnowledge(categoryName, description, categoryTickets);
+                        const markdownContent = await llmService.synthesizeKnowledge(t, categoryName, description, categoryTickets);
                         articles.push({ categoryName: `${categoryName} (Large Category)`, markdownContent });
                     }
                 } else {
                     // Standard synthesis for smaller categories
-                    const markdownContent = await llmService.synthesizeKnowledge(categoryName, description, categoryTickets);
+                    const markdownContent = await llmService.synthesizeKnowledge(t, categoryName, description, categoryTickets);
                     articles.push({ categoryName, markdownContent });
                 }
             }
             setKnowledgeArticles(articles);
-            setProgress({ current: categoriesToProcess.length, total: categoriesToProcess.length, task: 'Knowledge synthesis complete!' });
+            setProgress({ current: categoriesToProcess.length, total: categoriesToProcess.length, task: t('progress.synthesisComplete') });
             setProcessingState(ProcessingState.DONE);
 
         } catch (e) {
@@ -143,7 +149,7 @@ const App: React.FC = () => {
             setError(e instanceof Error ? e.message : 'An unknown error occurred.');
             setProcessingState(ProcessingState.ERROR);
         }
-    }, [rawData, separator, llmProvider, openaiBaseUrl]);
+    }, [rawData, separator, llmProvider, openaiBaseUrl, t]);
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-200 font-sans">

@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from './ui/Card';
 import { ProcessingState, Category } from '../types';
 import { Spinner } from './ui/Spinner';
@@ -21,6 +22,7 @@ const StateIndicator: React.FC<{ title: string; active: boolean; done: boolean }
 );
 
 export const OrchestratorSection: React.FC<OrchestratorSectionProps> = ({ processingState, categories, progress }) => {
+    const { t } = useTranslation();
     const isDiscovering = processingState === ProcessingState.DISCOVERING;
     const isCategorizing = processingState === ProcessingState.CATEGORIZING;
     const isSynthesizing = processingState === ProcessingState.SYNTHESIZING;
@@ -34,11 +36,11 @@ export const OrchestratorSection: React.FC<OrchestratorSectionProps> = ({ proces
     return (
         <Card>
             <div className="p-6">
-                <h2 className="text-lg font-semibold text-white mb-4">2. Agent Orchestration</h2>
+                <h2 className="text-lg font-semibold text-white mb-4">{t('orchestratorSection.title')}</h2>
                 <div className="space-y-4">
-                    <StateIndicator title="Discover Categories" active={isDiscovering} done={doneDiscovering} />
-                    <StateIndicator title="Categorize Data" active={isCategorizing} done={doneCategorizing} />
-                    <StateIndicator title="Synthesize Knowledge" active={isSynthesizing} done={doneSynthesizing} />
+                    <StateIndicator title={t('orchestratorSection.discoverCategories')} active={isDiscovering} done={doneDiscovering} />
+                    <StateIndicator title={t('orchestratorSection.categorizeData')} active={isCategorizing} done={doneCategorizing} />
+                    <StateIndicator title={t('orchestratorSection.synthesizeKnowledge')} active={isSynthesizing} done={doneSynthesizing} />
                 </div>
                 {showProgress && (
                     <div className="mt-6">
@@ -53,7 +55,7 @@ export const OrchestratorSection: React.FC<OrchestratorSectionProps> = ({ proces
                 )}
                 {categories.length > 0 && (
                     <div className="mt-6">
-                        <h3 className="text-md font-semibold text-white mb-3">Discovered Categories:</h3>
+                        <h3 className="text-md font-semibold text-white mb-3">{t('orchestratorSection.discoveredCategories')}</h3>
                         <div className="flex flex-wrap gap-2">
                             {categories.map((cat, index) => (
                                 <span key={index} className="px-2.5 py-1 text-sm font-medium rounded-full bg-gray-700 text-gray-300">

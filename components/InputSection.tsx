@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from './ui/Card';
 import { Textarea } from './ui/Textarea';
 import { Input } from './ui/Input';
@@ -16,26 +17,28 @@ interface InputSectionProps {
 }
 
 export const InputSection: React.FC<InputSectionProps> = ({ rawData, setRawData, separator, setSeparator, onProcess, isLoading }) => {
+    const { t } = useTranslation();
+
     return (
         <Card>
             <div className="p-6">
-                <h2 className="text-lg font-semibold text-white mb-4">1. Input Data</h2>
+                <h2 className="text-lg font-semibold text-white mb-4">{t('inputSection.title')}</h2>
                 <div className="space-y-4">
                     <div>
                         <label htmlFor="raw-data" className="block text-sm font-medium text-gray-400 mb-1">
-                            Paste your unstructured data (e.g., tickets, emails)
+                            {t('inputSection.pasteLabel')}
                         </label>
                         <Textarea
                             id="raw-data"
                             value={rawData}
                             onChange={(e) => setRawData(e.target.value)}
                             rows={12}
-                            placeholder="Paste your data here..."
+                            placeholder={t('inputSection.pastePlaceholder')}
                         />
                     </div>
                     <div>
                         <label htmlFor="separator" className="block text-sm font-medium text-gray-400 mb-1">
-                            Data record separator
+                            {t('inputSection.separatorLabel')}
                         </label>
                         <Input
                             id="separator"
@@ -46,7 +49,7 @@ export const InputSection: React.FC<InputSectionProps> = ({ rawData, setRawData,
                     </div>
                     <div className="pt-2">
                         <Button onClick={onProcess} disabled={isLoading} className="w-full flex justify-center">
-                            {isLoading ? <><Spinner className="mr-2" /> Processing...</> : 'Distill Knowledge'}
+                            {isLoading ? <><Spinner className="mr-2" /> {t('inputSection.processingButton')}</> : t('inputSection.processButton')}
                         </Button>
                     </div>
                 </div>
