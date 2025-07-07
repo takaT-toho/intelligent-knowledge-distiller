@@ -1,4 +1,4 @@
-import { Category, CategorizedTicketResult, LLMProvider } from '../types';
+import { Category, SubCategory, CategorizedTicketResult, SubCategorizedTicketResult, LLMProvider } from '../types';
 import { GeminiService } from './geminiService';
 import { OpenAIService } from './openaiService';
 
@@ -14,6 +14,18 @@ export interface LLMService {
     categoryDescription: string, 
     tickets: string[]
   ): Promise<string>;
+  discoverSubcategories(
+    parentCategoryName: string,
+    parentCategoryDescription: string,
+    tickets: string[]
+  ): Promise<SubCategory[]>;
+  categorizeToSubcategories(
+    tickets: string[],
+    parentCategoryName: string,
+    parentCategoryDescription: string,
+    subcategories: SubCategory[],
+    onProgress: (index: number) => void
+  ): Promise<(SubCategorizedTicketResult[] | null)[]>;
 }
 
 export class LLMServiceFactory {

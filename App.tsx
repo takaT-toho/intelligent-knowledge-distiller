@@ -8,7 +8,7 @@ import { OrchestratorSection } from './components/OrchestratorSection';
 import { OutputSection } from './components/OutputSection';
 import { SettingsModal } from './components/SettingsModal';
 import { Toast } from './components/ui/Toast';
-import { DEFAULT_RAW_TEXT, DEFAULT_SEPARATOR } from './constants';
+import { DEFAULT_RAW_TEXT, DEFAULT_SEPARATOR, SUBCATEGORY_THRESHOLD } from './constants';
 
 const App: React.FC = () => {
     const [rawData, setRawData] = useState<string>(DEFAULT_RAW_TEXT);
@@ -91,10 +91,48 @@ const App: React.FC = () => {
                 const categoryTickets = newCategorizedData.get(categoryName) || [];
                 const description = discoveredCategories.find(c => c.name === categoryName)?.description || '';
                 
-                setProgress({ current: i + 1, total: categoriesToProcess.length, task: `Synthesizing: ${categoryName}` });
-                
-                const markdownContent = await llmService.synthesizeKnowledge(categoryName, description, categoryTickets);
-                articles.push({ categoryName, markdownContent });
+                setProgress({ current: i + 1, total: categoriesToProcess.length, task: `Processing: ${categoryName}` });
+
+                if (categoryTickets.length > SUBCATEGORY_THRESHOLD) {
+                    // Sub-category discovery and synthesis for large categories
+                    setProgress({ current: i + 1, total: categoriesToProcess.length, task: `Discovering subcategories for: ${categoryName}` });
+                    const subcategories = await llmService.discoverSubcategories(categoryName, description, categoryTickets);
+
+                    if (subcategories.length > 0) {
+                        setProgress({ current: i + 1, total: categoriesToProcess.length, task: `Categorizing into subcategories for: ${categoryName}` });
+                        const subTicketCategories = await llmService.categorizeToSubcategories(categoryTickets, categoryName, description, subcategories, () => {});
+                        
+                        const subCategorizedData = new Map<string, string[]>();
+                        subTicketCategories.forEach((subCats, ticketIndex) => {
+                            if (subCats && subCats.length > 0) {
+                                const subCategoryName = subCats[0].subcategory;
+                                if (!subCategorizedData.has(subCategoryName)) {
+                                    subCategorizedData.set(subCategoryName, []);
+                                }
+                                subCategorizedData.get(subCategoryName)?.push(categoryTickets[ticketIndex]);
+                            }
+                        });
+
+                        const subCategoriesToProcess = Array.from(subCategorizedData.keys());
+                        for (const subCategoryName of subCategoriesToProcess) {
+                            const subCategoryTickets = subCategorizedData.get(subCategoryName) || [];
+                            const subCategoryDescription = subcategories.find(sc => sc.name === subCategoryName)?.description || '';
+                            
+                            setProgress({ current: i + 1, total: categoriesToProcess.length, task: `Synthesizing: ${categoryName} > ${subCategoryName}` });
+                            
+                            const markdownContent = await llmService.synthesizeKnowledge(subCategoryName, subCategoryDescription, subCategoryTickets);
+                            articles.push({ categoryName: `${categoryName} > ${subCategoryName}`, markdownContent });
+                        }
+                    } else {
+                        // If no subcategories are found, process the main category
+                        const markdownContent = await llmService.synthesizeKnowledge(categoryName, description, categoryTickets);
+                        articles.push({ categoryName: `${categoryName} (Large Category)`, markdownContent });
+                    }
+                } else {
+                    // Standard synthesis for smaller categories
+                    const markdownContent = await llmService.synthesizeKnowledge(categoryName, description, categoryTickets);
+                    articles.push({ categoryName, markdownContent });
+                }
             }
             setKnowledgeArticles(articles);
             setProgress({ current: categoriesToProcess.length, total: categoriesToProcess.length, task: 'Knowledge synthesis complete!' });

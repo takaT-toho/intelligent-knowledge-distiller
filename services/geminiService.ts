@@ -1,7 +1,13 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { Category, CategorizedTicketResult } from '../types';
+import { Category, SubCategory, CategorizedTicketResult, SubCategorizedTicketResult } from '../types';
 import { LLMService } from './llmService';
-import { getCategoryDiscoveryPrompt, getTicketCategorizationPrompt, getKnowledgeSynthesisPrompt } from '../constants';
+import { 
+    getCategoryDiscoveryPrompt, 
+    getTicketCategorizationPrompt, 
+    getKnowledgeSynthesisPrompt,
+    getSubcategoryDiscoveryPrompt,
+    getSubcategoryCategorizationPrompt
+} from '../constants';
 
 if (!process.env.GEMINI_API_KEY) {
     console.warn("GEMINI_API_KEY environment variable not set. The application will not be able to connect to the Gemini API.");
@@ -58,11 +64,12 @@ export class GeminiService implements LLMService {
         categories: Category[], 
         onProgress: (index: number) => void
     ): Promise<(CategorizedTicketResult[] | null)[]> {
-        const categoryList = categories.map(c => `- ${c.name}: ${c.description}`).join('\n');
+        const categoryList = JSON.stringify(categories, null, 2);
         
         const promises = tickets.map(async (ticket, index) => {
+            const [title, description] = ticket.split('\nDescription: ');
             try {
-                const prompt = getTicketCategorizationPrompt(ticket, categoryList);
+                const prompt = getTicketCategorizationPrompt(title.replace('Title: ', ''), description, categoryList);
                 const response: GenerateContentResponse = await this.client.models.generateContent({
                     model: 'gemini-2.5-flash-preview-04-17',
                     contents: prompt,
@@ -101,5 +108,73 @@ export class GeminiService implements LLMService {
         });
         
         return response.text || '';
+    }
+
+    async discoverSubcategories(
+        parentCategoryName: string,
+        parentCategoryDescription: string,
+        tickets: string[]
+    ): Promise<SubCategory[]> {
+        const sampleSize = Math.min(tickets.length, 100);
+        const ticketSample = tickets.slice(0, sampleSize).join('\n\n---\n\n');
+
+        const prompt = getSubcategoryDiscoveryPrompt(parentCategoryName, parentCategoryDescription, ticketSample);
+
+        const response: GenerateContentResponse = await this.client.models.generateContent({
+            model: 'gemini-2.5-flash-preview-04-17',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                temperature: 0.2,
+            }
+        });
+
+        const text = response.text || '';
+        const parsed = parseJsonResponse<{ subcategories: SubCategory[] }>(text);
+        if (!parsed || !Array.isArray(parsed.subcategories)) {
+            throw new Error("Failed to discover subcategories. The AI response was malformed.");
+        }
+        return parsed.subcategories;
+    }
+
+    async categorizeToSubcategories(
+        tickets: string[],
+        parentCategoryName: string,
+        parentCategoryDescription: string,
+        subcategories: SubCategory[],
+        onProgress: (index: number) => void
+    ): Promise<(SubCategorizedTicketResult[] | null)[]> {
+        const subcategoryList = JSON.stringify(subcategories, null, 2);
+
+        const promises = tickets.map(async (ticket, index) => {
+            const [title, description] = ticket.split('\nDescription: ');
+            try {
+                const prompt = getSubcategoryCategorizationPrompt(
+                    title.replace('Title: ', ''),
+                    description,
+                    parentCategoryName,
+                    parentCategoryDescription,
+                    subcategoryList
+                );
+                const response: GenerateContentResponse = await this.client.models.generateContent({
+                    model: 'gemini-2.5-flash-preview-04-17',
+                    contents: prompt,
+                    config: {
+                        responseMimeType: "application/json",
+                        temperature: 0.1,
+                    }
+                });
+                const text = response.text || '';
+                const parsed = parseJsonResponse<{ assignments: SubCategorizedTicketResult[] }>(text);
+                onProgress(index);
+                return parsed.assignments || null;
+            } catch (e) {
+                console.error(`Error categorizing ticket ${index} into subcategory:`, e);
+                onProgress(index);
+                return null;
+            }
+        });
+
+        return Promise.all(promises);
     }
 }
