@@ -3,22 +3,26 @@ import { GeminiService } from './geminiService';
 import { OpenAIService } from './openaiService';
 
 export interface LLMService {
-  discoverCategories(prompt: string): Promise<Category[]>;
+  discoverCategories(prompt: string, systemPrompt?: string): Promise<Category[]>;
   categorizeTickets(
     prompts: string[], 
-    onProgress: (index: number) => void
+    onProgress: (index: number) => void,
+    systemPrompt?: string
   ): Promise<(CategorizedTicketResult[] | null)[]>;
   synthesizeKnowledge(
-    prompt: string
+    prompt: string,
+    systemPrompt?: string
   ): Promise<string>;
   discoverSubcategories(
-    prompt: string
+    prompt: string,
+    systemPrompt?: string
   ): Promise<SubCategory[]>;
   categorizeToSubcategories(
     prompts: string[],
-    onProgress: (index: number) => void
+    onProgress: (index: number) => void,
+    systemPrompt?: string
   ): Promise<(SubCategorizedTicketResult[] | null)[]>;
-  optimizePrompt(prompt: string, domain: string): Promise<string>;
+  optimizePrompt(prompt: string, domain: string, systemPrompt?: string): Promise<string>;
 }
 
 export class LLMServiceFactory {

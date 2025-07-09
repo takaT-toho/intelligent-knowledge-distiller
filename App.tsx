@@ -76,11 +76,13 @@ const App: React.FC = () => {
                 return basePrompt;
             };
 
+            const systemPrompt = t('prompts.system.main');
+
             // Step 1: Discover Categories
             setProcessingState(ProcessingState.DISCOVERING);
             setProgress({ current: 0, total: 1, task: t('progress.discovering') });
             const categoryDiscoveryPrompt = await getFinalPrompt(getCategoryDiscoveryPrompt(t, domain, tickets));
-            const discoveredCategories = await llmService.discoverCategories(categoryDiscoveryPrompt);
+            const discoveredCategories = await llmService.discoverCategories(categoryDiscoveryPrompt, systemPrompt);
             setCategories(discoveredCategories);
             setProgress({ current: 1, total: 1, task: t('progress.categoriesDiscovered') });
 
@@ -93,9 +95,13 @@ const App: React.FC = () => {
                 return getTicketCategorizationPrompt(t, domain, title.replace('Title: ', ''), description, categoryListJson);
             });
             // Dynamic prompt optimization for categorization is complex, skipping for now.
-            const ticketCategories = await llmService.categorizeTickets(categorizationPrompts, (i) => {
-                 setProgress({ current: i + 1, total: tickets.length, task: t('progress.categorizing') });
-            });
+            const ticketCategories = await llmService.categorizeTickets(
+                categorizationPrompts, 
+                (i) => {
+                    setProgress({ current: i + 1, total: tickets.length, task: t('progress.categorizing') });
+                },
+                systemPrompt
+            );
             
             const newCategorizedData = new Map<string, string[]>();
             ticketCategories.forEach((cats, i) => {
@@ -126,7 +132,7 @@ const App: React.FC = () => {
                     // Sub-category discovery and synthesis for large categories
                     setProgress({ current: i + 1, total: categoriesToProcess.length, task: t('progress.discoveringSub', { categoryName }) });
                     const subcategoryDiscoveryPrompt = await getFinalPrompt(getSubcategoryDiscoveryPrompt(t, domain, categoryName, description, categoryTickets.join('\n\n---\n\n')));
-                    const subcategories = await llmService.discoverSubcategories(subcategoryDiscoveryPrompt);
+                    const subcategories = await llmService.discoverSubcategories(subcategoryDiscoveryPrompt, systemPrompt);
 
                     if (subcategories.length > 0) {
                         setProgress({ current: i + 1, total: categoriesToProcess.length, task: t('progress.categorizingSub', { categoryName }) });
@@ -135,7 +141,7 @@ const App: React.FC = () => {
                             const [title, description] = ticket.split('\nDescription: ');
                             return getSubcategoryCategorizationPrompt(t, domain, title.replace('Title: ', ''), description, categoryName, description, subcategoryListJson);
                         });
-                        const subTicketCategories = await llmService.categorizeToSubcategories(subCategorizationPrompts, () => {});
+                        const subTicketCategories = await llmService.categorizeToSubcategories(subCategorizationPrompts, () => {}, systemPrompt);
                         
                         const subCategorizedData = new Map<string, string[]>();
                         subTicketCategories.forEach((subCats, ticketIndex) => {
@@ -156,19 +162,19 @@ const App: React.FC = () => {
                             setProgress({ current: i + 1, total: categoriesToProcess.length, task: t('progress.synthesizingSub', { categoryName, subCategoryName }) });
                             
                             const knowledgeSynthesisPrompt = await getFinalPrompt(getKnowledgeSynthesisPrompt(t, domain, subCategoryName, subCategoryDescription, subCategoryTickets));
-                            const markdownContent = await llmService.synthesizeKnowledge(knowledgeSynthesisPrompt);
+                            const markdownContent = await llmService.synthesizeKnowledge(knowledgeSynthesisPrompt, systemPrompt);
                             articles.push({ categoryName: `${categoryName} > ${subCategoryName}`, markdownContent });
                         }
                     } else {
                         // If no subcategories are found, process the main category
                         const knowledgeSynthesisPrompt = await getFinalPrompt(getKnowledgeSynthesisPrompt(t, domain, categoryName, description, categoryTickets));
-                        const markdownContent = await llmService.synthesizeKnowledge(knowledgeSynthesisPrompt);
+                        const markdownContent = await llmService.synthesizeKnowledge(knowledgeSynthesisPrompt, systemPrompt);
                         articles.push({ categoryName: `${categoryName} (Large Category)`, markdownContent });
                     }
                 } else {
                     // Standard synthesis for smaller categories
                     const knowledgeSynthesisPrompt = await getFinalPrompt(getKnowledgeSynthesisPrompt(t, domain, categoryName, description, categoryTickets));
-                    const markdownContent = await llmService.synthesizeKnowledge(knowledgeSynthesisPrompt);
+                    const markdownContent = await llmService.synthesizeKnowledge(knowledgeSynthesisPrompt, systemPrompt);
                     articles.push({ categoryName, markdownContent });
                 }
             }

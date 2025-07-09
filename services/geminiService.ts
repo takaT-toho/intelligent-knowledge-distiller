@@ -21,6 +21,16 @@ const parseJsonResponse = <T,>(text: string): T => {
     }
 };
 
+const parseMarkdownResponse = (text: string): string => {
+    let markdownStr = text.trim();
+    const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
+    const match = markdownStr.match(fenceRegex);
+    if (match && match[2]) {
+        markdownStr = match[2].trim();
+    }
+    return markdownStr;
+};
+
 export class GeminiService implements LLMService {
     private client: GoogleGenAI;
 
@@ -28,20 +38,21 @@ export class GeminiService implements LLMService {
         this.client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
     }
 
-    private async generateContent(prompt: string, isJson: boolean): Promise<string> {
+    private async generateContent(prompt: string, isJson: boolean, systemPrompt?: string): Promise<string> {
         const response: GenerateContentResponse = await this.client.models.generateContent({
             model: 'gemini-2.5-flash-preview-04-17',
             contents: prompt,
             config: {
                 responseMimeType: isJson ? "application/json" : "text/plain",
                 temperature: isJson ? 0.2 : 0.5,
+                systemInstruction: systemPrompt ? systemPrompt : undefined,
             }
         });
         return response.text || '';
     }
 
-    async discoverCategories(prompt: string): Promise<Category[]> {
-        const text = await this.generateContent(prompt, true);
+    async discoverCategories(prompt: string, systemPrompt?: string): Promise<Category[]> {
+        const text = await this.generateContent(prompt, true, systemPrompt);
         const parsed = parseJsonResponse<{ categories: Category[] }>(text);
         if (!parsed || !Array.isArray(parsed.categories)) {
             throw new Error("Failed to discover categories. The AI response was malformed.");
@@ -49,10 +60,10 @@ export class GeminiService implements LLMService {
         return parsed.categories;
     }
 
-    async categorizeTickets(prompts: string[], onProgress: (index: number) => void): Promise<(CategorizedTicketResult[] | null)[]> {
+    async categorizeTickets(prompts: string[], onProgress: (index: number) => void, systemPrompt?: string): Promise<(CategorizedTicketResult[] | null)[]> {
         const promises = prompts.map(async (prompt, index) => {
             try {
-                const text = await this.generateContent(prompt, true);
+                const text = await this.generateContent(prompt, true, systemPrompt);
                 const parsed = parseJsonResponse<{ assignments: CategorizedTicketResult[] }>(text);
                 onProgress(index);
                 return parsed.assignments || null;
@@ -65,12 +76,13 @@ export class GeminiService implements LLMService {
         return Promise.all(promises);
     }
 
-    async synthesizeKnowledge(prompt: string): Promise<string> {
-        return this.generateContent(prompt, false);
+    async synthesizeKnowledge(prompt: string, systemPrompt?: string): Promise<string> {
+        const text = await this.generateContent(prompt, false, systemPrompt);
+        return parseMarkdownResponse(text);
     }
 
-    async discoverSubcategories(prompt: string): Promise<SubCategory[]> {
-        const text = await this.generateContent(prompt, true);
+    async discoverSubcategories(prompt: string, systemPrompt?: string): Promise<SubCategory[]> {
+        const text = await this.generateContent(prompt, true, systemPrompt);
         const parsed = parseJsonResponse<{ subcategories: SubCategory[] }>(text);
         if (!parsed || !Array.isArray(parsed.subcategories)) {
             throw new Error("Failed to discover subcategories. The AI response was malformed.");
@@ -78,10 +90,10 @@ export class GeminiService implements LLMService {
         return parsed.subcategories;
     }
 
-    async categorizeToSubcategories(prompts: string[], onProgress: (index: number) => void): Promise<(SubCategorizedTicketResult[] | null)[]> {
+    async categorizeToSubcategories(prompts: string[], onProgress: (index: number) => void, systemPrompt?: string): Promise<(SubCategorizedTicketResult[] | null)[]> {
         const promises = prompts.map(async (prompt, index) => {
             try {
-                const text = await this.generateContent(prompt, true);
+                const text = await this.generateContent(prompt, true, systemPrompt);
                 const parsed = parseJsonResponse<{ assignments: SubCategorizedTicketResult[] }>(text);
                 onProgress(index);
                 return parsed.assignments || null;
@@ -94,7 +106,7 @@ export class GeminiService implements LLMService {
         return Promise.all(promises);
     }
 
-    async optimizePrompt(prompt: string, domain: string): Promise<string> {
+    async optimizePrompt(prompt: string, domain: string, systemPrompt?: string): Promise<string> {
         const optimizationPrompt = `You are a prompt engineering expert. Your task is to refine the following prompt to be more effective for the specific domain of "${domain}".
 
 # Original Prompt
@@ -103,6 +115,6 @@ ${prompt}
 # Task
 Rewrite the prompt to be more specific, clear, and effective for the "${domain}" domain. Maintain the original JSON output format if one was requested. The revised prompt should guide the AI to produce more accurate and relevant results for this domain. Do not wrap the output in markdown or any other formatting. Just return the raw, optimized prompt.`;
         
-        return this.generateContent(optimizationPrompt, false);
+        return this.generateContent(optimizationPrompt, false, systemPrompt);
     }
 }

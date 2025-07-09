@@ -21,6 +21,16 @@ const parseJsonResponse = <T,>(text: string): T => {
     }
 };
 
+const parseMarkdownResponse = (text: string): string => {
+    let markdownStr = text.trim();
+    const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
+    const match = markdownStr.match(fenceRegex);
+    if (match && match[2]) {
+        markdownStr = match[2].trim();
+    }
+    return markdownStr;
+};
+
 export class OpenAIService implements LLMService {
     private client: OpenAI;
     
@@ -32,17 +42,23 @@ export class OpenAIService implements LLMService {
         });
     }
 
-    private async generateContent(prompt: string, isJson: boolean): Promise<string> {
+    private async generateContent(prompt: string, isJson: boolean, systemPrompt?: string): Promise<string> {
+        const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+        if (systemPrompt) {
+            messages.push({ role: "system", content: systemPrompt });
+        }
+        messages.push({ role: "user", content: prompt });
+
         const response = await this.client.chat.completions.create({
             model: "gpt-4.1-nano",
-            messages: [{ role: "user", content: prompt }],
+            messages: messages,
             response_format: isJson ? { type: "json_object" } : { type: "text" },
         });
         return response.choices[0]?.message.content || "";
     }
     
-    async discoverCategories(prompt: string): Promise<Category[]> {
-        const content = await this.generateContent(prompt, true);
+    async discoverCategories(prompt: string, systemPrompt?: string): Promise<Category[]> {
+        const content = await this.generateContent(prompt, true, systemPrompt);
         const parsed = parseJsonResponse<{ categories: Category[] }>(content);
         
         if (!parsed || !Array.isArray(parsed.categories)) {
@@ -54,11 +70,12 @@ export class OpenAIService implements LLMService {
     
     async categorizeTickets(
         prompts: string[], 
-        onProgress: (index: number) => void
+        onProgress: (index: number) => void,
+        systemPrompt?: string
     ): Promise<(CategorizedTicketResult[] | null)[]> {
         const promises = prompts.map(async (prompt, index) => {
             try {
-                const content = await this.generateContent(prompt, true);
+                const content = await this.generateContent(prompt, true, systemPrompt);
                 const parsed = parseJsonResponse<{ assignments: CategorizedTicketResult[] }>(content);
                 
                 onProgress(index);
@@ -73,12 +90,13 @@ export class OpenAIService implements LLMService {
         return Promise.all(promises);
     }
     
-    async synthesizeKnowledge(prompt: string): Promise<string> {
-        return this.generateContent(prompt, false);
+    async synthesizeKnowledge(prompt: string, systemPrompt?: string): Promise<string> {
+        const content = await this.generateContent(prompt, false, systemPrompt);
+        return parseMarkdownResponse(content);
     }
 
-    async discoverSubcategories(prompt: string): Promise<SubCategory[]> {
-        const content = await this.generateContent(prompt, true);
+    async discoverSubcategories(prompt: string, systemPrompt?: string): Promise<SubCategory[]> {
+        const content = await this.generateContent(prompt, true, systemPrompt);
         const parsed = parseJsonResponse<{ subcategories: SubCategory[] }>(content);
 
         if (!parsed || !Array.isArray(parsed.subcategories)) {
@@ -90,11 +108,12 @@ export class OpenAIService implements LLMService {
 
     async categorizeToSubcategories(
         prompts: string[],
-        onProgress: (index: number) => void
+        onProgress: (index: number) => void,
+        systemPrompt?: string
     ): Promise<(SubCategorizedTicketResult[] | null)[]> {
         const promises = prompts.map(async (prompt, index) => {
             try {
-                const content = await this.generateContent(prompt, true);
+                const content = await this.generateContent(prompt, true, systemPrompt);
                 const parsed = parseJsonResponse<{ assignments: SubCategorizedTicketResult[] }>(content);
 
                 onProgress(index);
@@ -109,7 +128,7 @@ export class OpenAIService implements LLMService {
         return Promise.all(promises);
     }
 
-    async optimizePrompt(prompt: string, domain: string): Promise<string> {
+    async optimizePrompt(prompt: string, domain: string, systemPrompt?: string): Promise<string> {
         const optimizationPrompt = `You are a prompt engineering expert. Your task is to refine the following prompt to be more effective for the specific domain of "${domain}".
 
 # Original Prompt
@@ -118,6 +137,7 @@ ${prompt}
 # Task
 Rewrite the prompt to be more specific, clear, and effective for the "${domain}" domain. Maintain the original JSON output format if one was requested. The revised prompt should guide the AI to produce more accurate and relevant results for this domain. Do not wrap the output in markdown or any other formatting. Just return the raw, optimized prompt.`;
         
-        return this.generateContent(optimizationPrompt, false);
+        // The system prompt for optimization itself is the optimization prompt.
+        return this.generateContent(optimizationPrompt, false, systemPrompt);
     }
 }
