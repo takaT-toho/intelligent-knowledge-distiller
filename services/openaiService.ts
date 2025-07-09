@@ -1,14 +1,6 @@
-import { TFunction } from 'i18next';
 import OpenAI from "openai";
 import { Category, SubCategory, CategorizedTicketResult, SubCategorizedTicketResult } from '../types';
 import { LLMService } from './llmService';
-import { 
-    getCategoryDiscoveryPrompt, 
-    getTicketCategorizationPrompt, 
-    getKnowledgeSynthesisPrompt,
-    getSubcategoryDiscoveryPrompt,
-    getSubcategoryCategorizationPrompt
-} from '../constants';
 
 if (!process.env.OPENAI_API_KEY) {
     console.warn("OPENAI_API_KEY environment variable not set. The application will not be able to connect to the OpenAI API.");
@@ -39,21 +31,18 @@ export class OpenAIService implements LLMService {
             baseURL: baseURL || "https://api.openai.com/v1"
         });
     }
-    
-    async discoverCategories(t: TFunction, tickets: string[]): Promise<Category[]> {
-        // Use a sample of tickets to avoid overly large prompts
-        const sampleSize = Math.min(tickets.length, 100);
-        const ticketSample = tickets.slice(0, sampleSize);
-        
-        const prompt = getCategoryDiscoveryPrompt(t, ticketSample);
-        
+
+    private async generateContent(prompt: string, isJson: boolean): Promise<string> {
         const response = await this.client.chat.completions.create({
             model: "gpt-4.1-nano",
             messages: [{ role: "user", content: prompt }],
-            response_format: { type: "json_object" }
+            response_format: isJson ? { type: "json_object" } : { type: "text" },
         });
-        
-        const content = response.choices[0]?.message.content || "";
+        return response.choices[0]?.message.content || "";
+    }
+    
+    async discoverCategories(prompt: string): Promise<Category[]> {
+        const content = await this.generateContent(prompt, true);
         const parsed = parseJsonResponse<{ categories: Category[] }>(content);
         
         if (!parsed || !Array.isArray(parsed.categories)) {
@@ -64,25 +53,12 @@ export class OpenAIService implements LLMService {
     }
     
     async categorizeTickets(
-        t: TFunction,
-        tickets: string[], 
-        categories: Category[], 
+        prompts: string[], 
         onProgress: (index: number) => void
     ): Promise<(CategorizedTicketResult[] | null)[]> {
-        const categoryList = JSON.stringify(categories, null, 2);
-        
-        const promises = tickets.map(async (ticket, index) => {
-            const [title, description] = ticket.split('\nDescription: ');
+        const promises = prompts.map(async (prompt, index) => {
             try {
-                const prompt = getTicketCategorizationPrompt(t, title.replace('Title: ', ''), description, categoryList);
-                
-                const response = await this.client.chat.completions.create({
-                    model: "gpt-4.1-nano",
-                    messages: [{ role: "user", content: prompt }],
-                    response_format: { type: "json_object" }
-                });
-                
-                const content = response.choices[0]?.message.content || "";
+                const content = await this.generateContent(prompt, true);
                 const parsed = parseJsonResponse<{ assignments: CategorizedTicketResult[] }>(content);
                 
                 onProgress(index);
@@ -90,47 +66,19 @@ export class OpenAIService implements LLMService {
             } catch (e) {
                 console.error(`Error categorizing ticket ${index}:`, e);
                 onProgress(index);
-                return null; // Return null on error for this specific ticket
+                return null;
             }
         });
         
         return Promise.all(promises);
     }
     
-    async synthesizeKnowledge(
-        t: TFunction,
-        categoryName: string, 
-        categoryDescription: string, 
-        tickets: string[]
-    ): Promise<string> {
-        const prompt = getKnowledgeSynthesisPrompt(t, categoryName, categoryDescription, tickets);
-        
-        const response = await this.client.chat.completions.create({
-            model: "gpt-4.1-nano",
-            messages: [{ role: "user", content: prompt }]
-        });
-        
-        return response.choices[0]?.message.content || "";
+    async synthesizeKnowledge(prompt: string): Promise<string> {
+        return this.generateContent(prompt, false);
     }
 
-    async discoverSubcategories(
-        t: TFunction,
-        parentCategoryName: string,
-        parentCategoryDescription: string,
-        tickets: string[]
-    ): Promise<SubCategory[]> {
-        const sampleSize = Math.min(tickets.length, 100);
-        const ticketSample = tickets.slice(0, sampleSize).join('\n\n---\n\n');
-
-        const prompt = getSubcategoryDiscoveryPrompt(t, parentCategoryName, parentCategoryDescription, ticketSample);
-
-        const response = await this.client.chat.completions.create({
-            model: "gpt-4.1-nano",
-            messages: [{ role: "user", content: prompt }],
-            response_format: { type: "json_object" }
-        });
-
-        const content = response.choices[0]?.message.content || "";
+    async discoverSubcategories(prompt: string): Promise<SubCategory[]> {
+        const content = await this.generateContent(prompt, true);
         const parsed = parseJsonResponse<{ subcategories: SubCategory[] }>(content);
 
         if (!parsed || !Array.isArray(parsed.subcategories)) {
@@ -141,34 +89,12 @@ export class OpenAIService implements LLMService {
     }
 
     async categorizeToSubcategories(
-        t: TFunction,
-        tickets: string[],
-        parentCategoryName: string,
-        parentCategoryDescription: string,
-        subcategories: SubCategory[],
+        prompts: string[],
         onProgress: (index: number) => void
     ): Promise<(SubCategorizedTicketResult[] | null)[]> {
-        const subcategoryList = JSON.stringify(subcategories, null, 2);
-
-        const promises = tickets.map(async (ticket, index) => {
-            const [title, description] = ticket.split('\nDescription: ');
+        const promises = prompts.map(async (prompt, index) => {
             try {
-                const prompt = getSubcategoryCategorizationPrompt(
-                    t,
-                    title.replace('Title: ', ''),
-                    description,
-                    parentCategoryName,
-                    parentCategoryDescription,
-                    subcategoryList
-                );
-
-                const response = await this.client.chat.completions.create({
-                    model: "gpt-4.1-nano",
-                    messages: [{ role: "user", content: prompt }],
-                    response_format: { type: "json_object" }
-                });
-
-                const content = response.choices[0]?.message.content || "";
+                const content = await this.generateContent(prompt, true);
                 const parsed = parseJsonResponse<{ assignments: SubCategorizedTicketResult[] }>(content);
 
                 onProgress(index);
@@ -181,5 +107,17 @@ export class OpenAIService implements LLMService {
         });
 
         return Promise.all(promises);
+    }
+
+    async optimizePrompt(prompt: string, domain: string): Promise<string> {
+        const optimizationPrompt = `You are a prompt engineering expert. Your task is to refine the following prompt to be more effective for the specific domain of "${domain}".
+
+# Original Prompt
+${prompt}
+
+# Task
+Rewrite the prompt to be more specific, clear, and effective for the "${domain}" domain. Maintain the original JSON output format if one was requested. The revised prompt should guide the AI to produce more accurate and relevant results for this domain. Do not wrap the output in markdown or any other formatting. Just return the raw, optimized prompt.`;
+        
+        return this.generateContent(optimizationPrompt, false);
     }
 }

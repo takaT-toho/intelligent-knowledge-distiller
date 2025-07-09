@@ -1,8 +1,15 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LLMProvider, ProcessingState, Category, KnowledgeArticle } from './types';
+import { LLMProvider, ProcessingState, Category, KnowledgeArticle, ProcessingMode } from './types';
 import { LLMServiceFactory } from './services';
+import { 
+    getCategoryDiscoveryPrompt,
+    getTicketCategorizationPrompt,
+    getKnowledgeSynthesisPrompt,
+    getSubcategoryDiscoveryPrompt,
+    getSubcategoryCategorizationPrompt
+} from './constants';
 import { Header } from './components/Header';
 import { InputSection } from './components/InputSection';
 import { OrchestratorSection } from './components/OrchestratorSection';
@@ -15,6 +22,8 @@ const App: React.FC = () => {
     const { t, i18n } = useTranslation();
     const [rawData, setRawData] = useState<string>(t('sampleText'));
     const [separator, setSeparator] = useState<string>(DEFAULT_SEPARATOR);
+    const [domain, setDomain] = useState<string>('Supply Chain');
+    const [processingMode, setProcessingMode] = useState<ProcessingMode>(ProcessingMode.SIMPLE);
     const [llmProvider, setLlmProvider] = useState<LLMProvider>(LLMProvider.GEMINI);
     const [processingState, setProcessingState] = useState<ProcessingState>(ProcessingState.IDLE);
     
@@ -60,17 +69,31 @@ const App: React.FC = () => {
                 baseURL: llmProvider === LLMProvider.OPENAI ? openaiBaseUrl : undefined
             });
 
+            const getFinalPrompt = async (basePrompt: string) => {
+                if (processingMode === ProcessingMode.DYNAMIC) {
+                    return await llmService.optimizePrompt(basePrompt, domain);
+                }
+                return basePrompt;
+            };
+
             // Step 1: Discover Categories
             setProcessingState(ProcessingState.DISCOVERING);
             setProgress({ current: 0, total: 1, task: t('progress.discovering') });
-            const discoveredCategories = await llmService.discoverCategories(t, tickets);
+            const categoryDiscoveryPrompt = await getFinalPrompt(getCategoryDiscoveryPrompt(t, domain, tickets));
+            const discoveredCategories = await llmService.discoverCategories(categoryDiscoveryPrompt);
             setCategories(discoveredCategories);
             setProgress({ current: 1, total: 1, task: t('progress.categoriesDiscovered') });
 
             // Step 2: Categorize Tickets
             setProcessingState(ProcessingState.CATEGORIZING);
             setProgress({ current: 0, total: tickets.length, task: t('progress.categorizing') });
-            const ticketCategories = await llmService.categorizeTickets(t, tickets, discoveredCategories, (i) => {
+            const categoryListJson = JSON.stringify(discoveredCategories, null, 2);
+            const categorizationPrompts = tickets.map(ticket => {
+                const [title, description] = ticket.split('\nDescription: ');
+                return getTicketCategorizationPrompt(t, domain, title.replace('Title: ', ''), description, categoryListJson);
+            });
+            // Dynamic prompt optimization for categorization is complex, skipping for now.
+            const ticketCategories = await llmService.categorizeTickets(categorizationPrompts, (i) => {
                  setProgress({ current: i + 1, total: tickets.length, task: t('progress.categorizing') });
             });
             
@@ -102,11 +125,17 @@ const App: React.FC = () => {
                 if (categoryTickets.length > SUBCATEGORY_THRESHOLD) {
                     // Sub-category discovery and synthesis for large categories
                     setProgress({ current: i + 1, total: categoriesToProcess.length, task: t('progress.discoveringSub', { categoryName }) });
-                    const subcategories = await llmService.discoverSubcategories(t, categoryName, description, categoryTickets);
+                    const subcategoryDiscoveryPrompt = await getFinalPrompt(getSubcategoryDiscoveryPrompt(t, domain, categoryName, description, categoryTickets.join('\n\n---\n\n')));
+                    const subcategories = await llmService.discoverSubcategories(subcategoryDiscoveryPrompt);
 
                     if (subcategories.length > 0) {
                         setProgress({ current: i + 1, total: categoriesToProcess.length, task: t('progress.categorizingSub', { categoryName }) });
-                        const subTicketCategories = await llmService.categorizeToSubcategories(t, categoryTickets, categoryName, description, subcategories, () => {});
+                        const subcategoryListJson = JSON.stringify(subcategories, null, 2);
+                        const subCategorizationPrompts = categoryTickets.map(ticket => {
+                            const [title, description] = ticket.split('\nDescription: ');
+                            return getSubcategoryCategorizationPrompt(t, domain, title.replace('Title: ', ''), description, categoryName, description, subcategoryListJson);
+                        });
+                        const subTicketCategories = await llmService.categorizeToSubcategories(subCategorizationPrompts, () => {});
                         
                         const subCategorizedData = new Map<string, string[]>();
                         subTicketCategories.forEach((subCats, ticketIndex) => {
@@ -126,17 +155,20 @@ const App: React.FC = () => {
                             
                             setProgress({ current: i + 1, total: categoriesToProcess.length, task: t('progress.synthesizingSub', { categoryName, subCategoryName }) });
                             
-                            const markdownContent = await llmService.synthesizeKnowledge(t, subCategoryName, subCategoryDescription, subCategoryTickets);
+                            const knowledgeSynthesisPrompt = await getFinalPrompt(getKnowledgeSynthesisPrompt(t, domain, subCategoryName, subCategoryDescription, subCategoryTickets));
+                            const markdownContent = await llmService.synthesizeKnowledge(knowledgeSynthesisPrompt);
                             articles.push({ categoryName: `${categoryName} > ${subCategoryName}`, markdownContent });
                         }
                     } else {
                         // If no subcategories are found, process the main category
-                        const markdownContent = await llmService.synthesizeKnowledge(t, categoryName, description, categoryTickets);
+                        const knowledgeSynthesisPrompt = await getFinalPrompt(getKnowledgeSynthesisPrompt(t, domain, categoryName, description, categoryTickets));
+                        const markdownContent = await llmService.synthesizeKnowledge(knowledgeSynthesisPrompt);
                         articles.push({ categoryName: `${categoryName} (Large Category)`, markdownContent });
                     }
                 } else {
                     // Standard synthesis for smaller categories
-                    const markdownContent = await llmService.synthesizeKnowledge(t, categoryName, description, categoryTickets);
+                    const knowledgeSynthesisPrompt = await getFinalPrompt(getKnowledgeSynthesisPrompt(t, domain, categoryName, description, categoryTickets));
+                    const markdownContent = await llmService.synthesizeKnowledge(knowledgeSynthesisPrompt);
                     articles.push({ categoryName, markdownContent });
                 }
             }
@@ -149,7 +181,7 @@ const App: React.FC = () => {
             setError(e instanceof Error ? e.message : 'An unknown error occurred.');
             setProcessingState(ProcessingState.ERROR);
         }
-    }, [rawData, separator, llmProvider, openaiBaseUrl, t]);
+    }, [rawData, separator, llmProvider, openaiBaseUrl, t, domain, processingMode]);
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-200 font-sans">
@@ -162,6 +194,10 @@ const App: React.FC = () => {
                             setRawData={setRawData}
                             separator={separator}
                             setSeparator={setSeparator}
+                            domain={domain}
+                            setDomain={setDomain}
+                            processingMode={processingMode}
+                            setProcessingMode={setProcessingMode}
                             onProcess={handleProcess}
                             isLoading={processingState !== ProcessingState.IDLE && processingState !== ProcessingState.DONE && processingState !== ProcessingState.ERROR}
                         />

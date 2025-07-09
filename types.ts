@@ -37,3 +37,8 @@ export enum ProcessingState {
   DONE = 'DONE',
   ERROR = 'ERROR',
 }
+
+export enum ProcessingMode {
+  SIMPLE = 'simple',
+  DYNAMIC = 'dynamic',
+}

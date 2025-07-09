@@ -1,14 +1,6 @@
-import { TFunction } from 'i18next';
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { Category, SubCategory, CategorizedTicketResult, SubCategorizedTicketResult } from '../types';
 import { LLMService } from './llmService';
-import { 
-    getCategoryDiscoveryPrompt, 
-    getTicketCategorizationPrompt, 
-    getKnowledgeSynthesisPrompt,
-    getSubcategoryDiscoveryPrompt,
-    getSubcategoryCategorizationPrompt
-} from '../constants';
+import { Category, SubCategory, CategorizedTicketResult, SubCategorizedTicketResult } from '../types';
 
 if (!process.env.GEMINI_API_KEY) {
     console.warn("GEMINI_API_KEY environment variable not set. The application will not be able to connect to the Gemini API.");
@@ -36,23 +28,20 @@ export class GeminiService implements LLMService {
         this.client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
     }
 
-    async discoverCategories(t: TFunction, tickets: string[]): Promise<Category[]> {
-        // Use a sample of tickets to avoid overly large prompts
-        const sampleSize = Math.min(tickets.length, 100);
-        const ticketSample = tickets.slice(0, sampleSize);
-        
-        const prompt = getCategoryDiscoveryPrompt(t, ticketSample);
-        
+    private async generateContent(prompt: string, isJson: boolean): Promise<string> {
         const response: GenerateContentResponse = await this.client.models.generateContent({
             model: 'gemini-2.5-flash-preview-04-17',
             contents: prompt,
             config: {
-                responseMimeType: "application/json",
-                temperature: 0.2,
+                responseMimeType: isJson ? "application/json" : "text/plain",
+                temperature: isJson ? 0.2 : 0.5,
             }
         });
+        return response.text || '';
+    }
 
-        const text = response.text || '';
+    async discoverCategories(prompt: string): Promise<Category[]> {
+        const text = await this.generateContent(prompt, true);
         const parsed = parseJsonResponse<{ categories: Category[] }>(text);
         if (!parsed || !Array.isArray(parsed.categories)) {
             throw new Error("Failed to discover categories. The AI response was malformed.");
@@ -60,80 +49,28 @@ export class GeminiService implements LLMService {
         return parsed.categories;
     }
 
-    async categorizeTickets(
-        t: TFunction,
-        tickets: string[], 
-        categories: Category[], 
-        onProgress: (index: number) => void
-    ): Promise<(CategorizedTicketResult[] | null)[]> {
-        const categoryList = JSON.stringify(categories, null, 2);
-        
-        const promises = tickets.map(async (ticket, index) => {
-            const [title, description] = ticket.split('\nDescription: ');
+    async categorizeTickets(prompts: string[], onProgress: (index: number) => void): Promise<(CategorizedTicketResult[] | null)[]> {
+        const promises = prompts.map(async (prompt, index) => {
             try {
-                const prompt = getTicketCategorizationPrompt(t, title.replace('Title: ', ''), description, categoryList);
-                const response: GenerateContentResponse = await this.client.models.generateContent({
-                    model: 'gemini-2.5-flash-preview-04-17',
-                    contents: prompt,
-                    config: {
-                        responseMimeType: "application/json",
-                        temperature: 0.1,
-                    }
-                });
-                const text = response.text || '';
+                const text = await this.generateContent(prompt, true);
                 const parsed = parseJsonResponse<{ assignments: CategorizedTicketResult[] }>(text);
                 onProgress(index);
                 return parsed.assignments || null;
             } catch (e) {
                 console.error(`Error categorizing ticket ${index}:`, e);
                 onProgress(index);
-                return null; // Return null on error for this specific ticket
+                return null;
             }
         });
-
         return Promise.all(promises);
     }
 
-    async synthesizeKnowledge(
-        t: TFunction,
-        categoryName: string, 
-        categoryDescription: string, 
-        tickets: string[]
-    ): Promise<string> {
-        const prompt = getKnowledgeSynthesisPrompt(t, categoryName, categoryDescription, tickets);
-        
-        const response: GenerateContentResponse = await this.client.models.generateContent({
-            model: 'gemini-2.5-flash-preview-04-17',
-            contents: prompt,
-            config: {
-                temperature: 0.5,
-            }
-        });
-        
-        return response.text || '';
+    async synthesizeKnowledge(prompt: string): Promise<string> {
+        return this.generateContent(prompt, false);
     }
 
-    async discoverSubcategories(
-        t: TFunction,
-        parentCategoryName: string,
-        parentCategoryDescription: string,
-        tickets: string[]
-    ): Promise<SubCategory[]> {
-        const sampleSize = Math.min(tickets.length, 100);
-        const ticketSample = tickets.slice(0, sampleSize).join('\n\n---\n\n');
-
-        const prompt = getSubcategoryDiscoveryPrompt(t, parentCategoryName, parentCategoryDescription, ticketSample);
-
-        const response: GenerateContentResponse = await this.client.models.generateContent({
-            model: 'gemini-2.5-flash-preview-04-17',
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                temperature: 0.2,
-            }
-        });
-
-        const text = response.text || '';
+    async discoverSubcategories(prompt: string): Promise<SubCategory[]> {
+        const text = await this.generateContent(prompt, true);
         const parsed = parseJsonResponse<{ subcategories: SubCategory[] }>(text);
         if (!parsed || !Array.isArray(parsed.subcategories)) {
             throw new Error("Failed to discover subcategories. The AI response was malformed.");
@@ -141,36 +78,10 @@ export class GeminiService implements LLMService {
         return parsed.subcategories;
     }
 
-    async categorizeToSubcategories(
-        t: TFunction,
-        tickets: string[],
-        parentCategoryName: string,
-        parentCategoryDescription: string,
-        subcategories: SubCategory[],
-        onProgress: (index: number) => void
-    ): Promise<(SubCategorizedTicketResult[] | null)[]> {
-        const subcategoryList = JSON.stringify(subcategories, null, 2);
-
-        const promises = tickets.map(async (ticket, index) => {
-            const [title, description] = ticket.split('\nDescription: ');
+    async categorizeToSubcategories(prompts: string[], onProgress: (index: number) => void): Promise<(SubCategorizedTicketResult[] | null)[]> {
+        const promises = prompts.map(async (prompt, index) => {
             try {
-                const prompt = getSubcategoryCategorizationPrompt(
-                    t,
-                    title.replace('Title: ', ''),
-                    description,
-                    parentCategoryName,
-                    parentCategoryDescription,
-                    subcategoryList
-                );
-                const response: GenerateContentResponse = await this.client.models.generateContent({
-                    model: 'gemini-2.5-flash-preview-04-17',
-                    contents: prompt,
-                    config: {
-                        responseMimeType: "application/json",
-                        temperature: 0.1,
-                    }
-                });
-                const text = response.text || '';
+                const text = await this.generateContent(prompt, true);
                 const parsed = parseJsonResponse<{ assignments: SubCategorizedTicketResult[] }>(text);
                 onProgress(index);
                 return parsed.assignments || null;
@@ -180,7 +91,18 @@ export class GeminiService implements LLMService {
                 return null;
             }
         });
-
         return Promise.all(promises);
+    }
+
+    async optimizePrompt(prompt: string, domain: string): Promise<string> {
+        const optimizationPrompt = `You are a prompt engineering expert. Your task is to refine the following prompt to be more effective for the specific domain of "${domain}".
+
+# Original Prompt
+${prompt}
+
+# Task
+Rewrite the prompt to be more specific, clear, and effective for the "${domain}" domain. Maintain the original JSON output format if one was requested. The revised prompt should guide the AI to produce more accurate and relevant results for this domain. Do not wrap the output in markdown or any other formatting. Just return the raw, optimized prompt.`;
+        
+        return this.generateContent(optimizationPrompt, false);
     }
 }

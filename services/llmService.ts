@@ -1,36 +1,24 @@
-import { TFunction } from 'i18next';
 import { Category, SubCategory, CategorizedTicketResult, SubCategorizedTicketResult, LLMProvider } from '../types';
 import { GeminiService } from './geminiService';
 import { OpenAIService } from './openaiService';
 
 export interface LLMService {
-  discoverCategories(t: TFunction, tickets: string[]): Promise<Category[]>;
+  discoverCategories(prompt: string): Promise<Category[]>;
   categorizeTickets(
-    t: TFunction,
-    tickets: string[], 
-    categories: Category[], 
+    prompts: string[], 
     onProgress: (index: number) => void
   ): Promise<(CategorizedTicketResult[] | null)[]>;
   synthesizeKnowledge(
-    t: TFunction,
-    categoryName: string, 
-    categoryDescription: string, 
-    tickets: string[]
+    prompt: string
   ): Promise<string>;
   discoverSubcategories(
-    t: TFunction,
-    parentCategoryName: string,
-    parentCategoryDescription: string,
-    tickets: string[]
+    prompt: string
   ): Promise<SubCategory[]>;
   categorizeToSubcategories(
-    t: TFunction,
-    tickets: string[],
-    parentCategoryName: string,
-    parentCategoryDescription: string,
-    subcategories: SubCategory[],
+    prompts: string[],
     onProgress: (index: number) => void
   ): Promise<(SubCategorizedTicketResult[] | null)[]>;
+  optimizePrompt(prompt: string, domain: string): Promise<string>;
 }
 
 export class LLMServiceFactory {
