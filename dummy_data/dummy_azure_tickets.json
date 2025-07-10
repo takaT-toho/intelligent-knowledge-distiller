@@ -1,0 +1,887 @@
+[
+  {
+    "ticket_id": "TICKET-001",
+    "category": "インフラ構築",
+    "title": "Webサーバー用VMのサイジングについて",
+    "requester": "田中 太郎 (営業部)",
+    "created_at": "2025-07-01T10:00:00Z",
+    "communications": [
+      {
+        "sender": "田中 太郎 (営業部)",
+        "message": "お世話になっております。次期CRMシステム用にAzure VMを構築予定です。Webサーバーとして利用するのですが、推奨されるスペック（サイジング）についてご教示いただけますでしょうか。想定ユーザー数は500名です。",
+        "timestamp": "2025-07-01T10:00:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "田中様\n\nお問い合わせありがとうございます。CRMシステムの詳細（アプリケーションの特性、予想される同時アクセス数など）をもう少し詳しくお伺いできますでしょうか。それによって最適なスペックが変動します。",
+        "timestamp": "2025-07-01T11:30:00Z"
+      },
+      {
+        "sender": "田中 太郎 (営業部)",
+        "message": "佐藤様\n\nご連絡ありがとうございます。同時アクセスは最大で50程度を想定しています。アプリケーションは一般的なLAMP環境です。",
+        "timestamp": "2025-07-01T14:00:00Z"
+      }
+    ],
+    "resolution": "Standard_D4s_v5 (4vCPU, 16GiBメモリ) を2台、負荷分散構成とすることを提案。将来的な負荷増に合わせてスケールアウト可能な構成とした。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-002",
+    "category": "インフラ構築",
+    "title": "VNet間のピアリング設定方法",
+    "requester": "鈴木 一郎 (開発部)",
+    "created_at": "2025-07-02T14:20:00Z",
+    "communications": [
+      {
+        "sender": "鈴木 一郎 (開発部)",
+        "message": "開発環境VNetとステージング環境VNetを接続したいのですが、VNetピアリングの設定手順を教えてください。IPアドレス範囲の重複はありません。",
+        "timestamp": "2025-07-02T14:20:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "鈴木様\n\n承知いたしました。Azure PortalでのVNetピアリング設定手順書をお送りします。双方向での設定が必要になる点にご注意ください。[手順書URL]",
+        "timestamp": "2025-07-02T15:00:00Z"
+      }
+    ],
+    "resolution": "Azure Portalを利用したVNetピアリングの設定手順を案内し、無事接続が確認された。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-003",
+    "category": "PaaSサービス利用",
+    "title": "Azure App Serviceのデプロイメントスロットについて",
+    "requester": "高橋 三郎 (開発部)",
+    "created_at": "2025-07-03T11:00:00Z",
+    "communications": [
+      {
+        "sender": "高橋 三郎 (開発部)",
+        "message": "現在App Serviceで本番環境を運用していますが、ダウンタイムなしでデプロイする方法を探しています。デプロイメントスロットという機能で実現可能でしょうか？",
+        "timestamp": "2025-07-03T11:00:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "高橋様\n\nはい、デプロイメントスロットを利用することで、ステージング環境を別途用意し、テスト後に本番環境とスワップ（入れ替え）することでダウンタイムなしのデプロイが可能です。設定方法と注意点についてまとめた資料をお送りします。",
+        "timestamp": "2025-07-03T11:45:00Z"
+      }
+    ],
+    "resolution": "デプロイメントスロットの利用方法と、スワップ時の注意点（環境変数や接続文字列の扱い）を説明し、ブルーグリーンデプロイメントを実現した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-004",
+    "category": "PaaSサービス利用",
+    "title": "Azure SQL Databaseの接続エラー",
+    "requester": "伊藤 四朗 (開発部)",
+    "created_at": "2025-07-04T16:00:00Z",
+    "communications": [
+      {
+        "sender": "伊藤 四朗 (開発部)",
+        "message": "開発用のApp ServiceからAzure SQL Databaseに接続しようとすると、タイムアウトエラーが発生します。ファイアウォールの設定でApp Serviceからのアクセスは許可しているはずなのですが…。",
+        "timestamp": "2025-07-04T16:00:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "伊藤様\n\nApp Serviceの送信IPアドレスは変動する可能性があります。SQL Databaseのファイアウォール設定で「Azureサービスおよびリソースにこのサーバーへのアクセスを許可する」のオプションを有効にしていますでしょうか？",
+        "timestamp": "2025-07-04T16:30:00Z"
+      },
+      {
+        "sender": "伊藤 四朗 (開発部)",
+        "message": "確認したところ、その設定がOFFになっていました。ONにしたところ無事接続できました。ありがとうございます！",
+        "timestamp": "2025-07-04T16:45:00Z"
+      }
+    ],
+    "resolution": "Azure SQL Databaseのファイアウォール設定で「Azureサービスおよびリソースにこのサーバーへのアクセスを許可する」を有効にすることで解決。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-005",
+    "category": "認証・認可",
+    "title": "Azure AD (Entra ID) でのSAML認証設定",
+    "requester": "渡辺 五郎 (情報システム部)",
+    "created_at": "2025-07-05T09:30:00Z",
+    "communications": [
+      {
+        "sender": "渡辺 五郎 (情報システム部)",
+        "message": "外部SaaSアプリケーションとのSAML認証連携をAzure AD (Entra ID) で設定したいです。基本的な設定フローを教えてください。",
+        "timestamp": "2025-07-05T09:30:00Z"
+      }
+    ],
+    "resolution": "Azure ADのエンタープライズアプリケーション登録から、対象SaaSのギャラリーアプリを選択またはカスタムアプリとして登録し、SAML設定（識別子、応答URLなど）を行う手順を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-006",
+    "category": "認証・認可",
+    "title": "特定のユーザーグループのみアクセス許可したい",
+    "requester": "山本 六郎 (人事部)",
+    "created_at": "2025-07-06T13:00:00Z",
+    "communications": [
+      {
+        "sender": "山本 六郎 (人事部)",
+        "message": "人事評価システム（App Serviceで構築）へのアクセスを、人事部のメンバーのみに制限したいです。Azure ADのグループを使って制御できますか？",
+        "timestamp": "2025-07-06T13:00:00Z"
+      }
+    ],
+    "resolution": "App Serviceの認証機能とAzure ADを連携させ、「エンタープライズアプリケーション」の設定で「ユーザーの割り当てが必要ですか？」を「はい」にし、対象のADグループを割り当てることでアクセス制御を実現する方法を案内。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-007",
+    "category": "コスト管理・最適化",
+    "title": "開発環境のVMを夜間自動停止したい",
+    "requester": "中村 七郎 (開発部)",
+    "created_at": "2025-07-07T17:00:00Z",
+    "communications": [
+      {
+        "sender": "中村 七郎 (開発部)",
+        "message": "開発環境のVMが夜間や休日に起動したままになっており、コストが無駄になっています。これを自動で停止・起動させる方法はありますか？",
+        "timestamp": "2025-07-07T17:00:00Z"
+      }
+    ],
+    "resolution": "Azure Automation Accountを作成し、Runbook（PowerShellスクリプト）とスケジュール機能を組み合わせて、指定したタグが付与されたVMを夜間に停止し、平日の朝に起動する仕組みを構築した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-008",
+    "category": "コスト管理・最適化",
+    "title": "ストレージアカウントのコストが想定より高い",
+    "requester": "小林 八郎 (経理部)",
+    "created_at": "2025-07-08T10:15:00Z",
+    "communications": [
+      {
+        "sender": "小林 八郎 (経理部)",
+        "message": "先月のAzure請求額を確認したところ、あるストレージアカウントのコストが急増していました。原因を調査する方法はありますか？",
+        "timestamp": "2025-07-08T10:15:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "小林様\n\nAzure PortalのCost Management + Billingからコスト分析を開き、対象のストレージアカウントでリソースグループ、リソース、測定カテゴリなどでドリルダウンすることで、どの操作（トランザクション）やデータ種別（BLOB、Fileなど）でコストが発生しているか詳細に確認できます。",
+        "timestamp": "2025-07-08T11:00:00Z"
+      }
+    ],
+    "resolution": "Cost Managementのコスト分析機能の利用方法を案内。調査の結果、特定のアプリケーションによる大量の書き込みトランザクションが原因と判明。アプリケーションの改修を促した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-009",
+    "category": "セキュリティ",
+    "title": "VMへのSSH接続をセキュアにしたい",
+    "requester": "加藤 九郎 (情報システム部)",
+    "created_at": "2025-07-09T15:00:00Z",
+    "communications": [
+      {
+        "sender": "加藤 九郎 (情報システム部)",
+        "message": "現在、Linux VMへのSSH接続（ポート22）をインターネットに公開していますが、セキュリティリスクが懸念されます。より安全な接続方法はありますか？",
+        "timestamp": "2025-07-09T15:00:00Z"
+      }
+    ],
+    "resolution": "Azure Bastionの利用を提案。Bastionホストを経由することで、VMにパブリックIPを持たせることなく、ブラウザ経由で安全にSSH接続が可能になる点を説明し、導入を支援した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-010",
+    "category": "セキュリティ",
+    "title": "Microsoft Defender for Cloudのアラートについて",
+    "requester": "吉田 十郎 (セキュリティチーム)",
+    "created_at": "2025-07-10T11:20:00Z",
+    "communications": [
+      {
+        "sender": "吉田 十郎 (セキュリティチーム)",
+        "message": "Defender for Cloudから「疑わしい認証試行」というアラートが上がっています。これがどのような脅威で、どう対処すべきか教えてください。",
+        "timestamp": "2025-07-10T11:20:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "吉田様\n\nそのアラートは、通常とは異なる場所やパターンからのログイン試行を検知したものです。アラート詳細画面から、試行元のIPアドレスやユーザー名を確認し、正規のアクセスでない場合は、対象アカウントのパスワードリセットや多要素認証の強化を推奨します。",
+        "timestamp": "2025-07-10T12:00:00Z"
+      }
+    ],
+    "resolution": "アラート内容の解説と、Defender for Cloud上での調査方法、および推奨される対処法（パスワードリセット、MFA強化、条件付きアクセスポリシーの見直し）を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-011",
+    "category": "データ活用・分析基盤",
+    "title": "オンプレミスDBからAzure Synapse Analyticsへのデータ連携",
+    "requester": "山田 花子 (データ分析部)",
+    "created_at": "2025-07-11T14:00:00Z",
+    "communications": [
+      {
+        "sender": "山田 花子 (データ分析部)",
+        "message": "オンプレミスのSQL Serverから、夜間バッチでAzure Synapse Analyticsにデータを転送したいです。推奨されるサービスと構成を教えてください。",
+        "timestamp": "2025-07-11T14:00:00Z"
+      }
+    ],
+    "resolution": "Azure Data Factoryを利用し、オンプレミス環境にセルフホステッド統合ランタイム(SHIR)をインストール。Data Factoryのパイプラインでコピーアクティビティを定義し、スケジュール実行することで定期的なデータ連携を実現する方法を提案・構築支援した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-012",
+    "category": "データ活用・分析基盤",
+    "title": "Power BIからAzure SQL Databaseへの接続方法",
+    "requester": "木村 良子 (経営企画部)",
+    "created_at": "2025-07-12T10:30:00Z",
+    "communications": [
+      {
+        "sender": "木村 良子 (経営企画部)",
+        "message": "Power BI DesktopからAzure上のSQL Databaseに接続してレポートを作成したいです。接続情報を入力してもエラーになります。",
+        "timestamp": "2025-07-12T10:30:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "木村様\n\n接続エラーのメッセージを教えていただけますか？また、SQL Databaseのファイアウォール設定で、お使いのPCのグローバルIPアドレスからの接続を許可していますでしょうか？",
+        "timestamp": "2025-07-12T11:00:00Z"
+      }
+    ],
+    "resolution": "SQL Databaseのファイアウォール設定に、クライアントPCのIPアドレスを追加することで接続問題を解決。Power BIの「データを取得」から「Azure SQL データベース」を選択し、DirectQueryモードで接続する方法を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-013",
+    "category": "運用・監視",
+    "title": "VMのCPU使用率アラート設定",
+    "requester": "斎藤 真一 (運用チーム)",
+    "created_at": "2025-07-13T16:00:00Z",
+    "communications": [
+      {
+        "sender": "斎藤 真一 (運用チーム)",
+        "message": "本番環境のVMについて、CPU使用率が5分間継続して90%を超えた場合に、運用チームのメーリングリストに通知が飛ぶようにしたいです。Azure Monitorでの設定方法を教えてください。",
+        "timestamp": "2025-07-13T16:00:00Z"
+      }
+    ],
+    "resolution": "Azure Monitorのアラート機能を利用。対象VMのメトリック「Percentage CPU」を選択し、しきい値90、集計の粒度5分、評価の頻度1分でアラートルールを作成。アクショングループで通知先メールアドレスを設定する方法を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-014",
+    "category": "運用・監視",
+    "title": "App Serviceのアプリケーションログの確認方法",
+    "requester": "井上 健太 (開発部)",
+    "created_at": "2025-07-14T18:00:00Z",
+    "communications": [
+      {
+        "sender": "井上 健太 (開発部)",
+        "message": "App Serviceで稼働中のアプリケーションでエラーが発生しているようなのですが、ログを確認する方法がわかりません。どこで確認できますか？",
+        "timestamp": "2025-07-14T18:00:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "井上様\n\nApp Serviceの診断設定でLog Analyticsワークスペースへのログ出力を有効にしていますか？有効であれば、Log AnalyticsでAppServiceAppLogsテーブルをKQLクエリで検索することで確認できます。また、リアルタイムで確認したい場合は、Log Stream機能も便利です。",
+        "timestamp": "2025-07-14T18:30:00Z"
+      }
+    ],
+    "resolution": "App Serviceの診断設定を行い、アプリケーションログをLog Analyticsワークスペースに転送する方法を案内。KQLを使ったログの検索・分析方法についてもレクチャーした。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-015",
+    "category": "インフラ構築",
+    "title": "可用性セットと可用性ゾーンの違いについて",
+    "requester": "森田 正 (インフラ部)",
+    "created_at": "2025-07-15T11:40:00Z",
+    "communications": [
+      {
+        "sender": "森田 正 (インフラ部)",
+        "message": "VMの冗長化を検討しています。可用性セットと可用性ゾーンのどちらを選択すべきでしょうか？それぞれのメリット・デメリットを教えてください。",
+        "timestamp": "2025-07-15T11:40:00Z"
+      }
+    ],
+    "resolution": "可用性セットが同一データセンター内でのハードウェア障害から保護するのに対し、可用性ゾーンはデータセンターレベルの障害から保護できる、より高い可用性を提供することを説明。SLAの違いやコスト面も考慮し、システムの重要度に応じた選択を推奨した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-016",
+    "category": "PaaSサービス利用",
+    "title": "Azure Functionsのトリガーについて",
+    "requester": "橋本 愛 (開発部)",
+    "created_at": "2025-07-16T09:55:00Z",
+    "communications": [
+      {
+        "sender": "橋本 愛 (開発部)",
+        "message": "Blob Storageに新しいファイルがアップロードされたことを検知して、自動で処理を実行する仕組みを作りたいです。Azure Functionsで実現できますか？",
+        "timestamp": "2025-07-16T09:55:00Z"
+      }
+    ],
+    "resolution": "Azure FunctionsのBlobトリガーを利用する方法を案内。指定したコンテナとパスにファイルが作成された際にFunctionが自動実行される仕組みを説明し、サンプルコードを提供した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-017",
+    "category": "認証・認可",
+    "title": "多要素認証(MFA)の強制について",
+    "requester": "岡田 直樹 (セキュリティチーム)",
+    "created_at": "2025-07-17T14:20:00Z",
+    "communications": [
+      {
+        "sender": "岡田 直樹 (セキュリティチーム)",
+        "message": "全社員に対してAzure ADの多要素認証を必須にしたいと考えています。設定方法を教えてください。",
+        "timestamp": "2025-07-17T14:20:00Z"
+      }
+    ],
+    "resolution": "Azure ADの条件付きアクセスポリシーを利用する方法を提案。「すべてのユーザー」を対象に、「多要素認証を要求する」という制御を設定することで、全ユーザーのサインイン時にMFAを強制できることを案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-018",
+    "category": "コスト管理・最適化",
+    "title": "予約インスタンス(RI)の購入相談",
+    "requester": "西村 博 (経理部)",
+    "created_at": "2025-07-18T13:00:00Z",
+    "communications": [
+      {
+        "sender": "西村 博 (経理部)",
+        "message": "本番環境のVMは24時間365日稼働しています。コスト削減のため予約インスタンスの購入を検討していますが、どのインスタンスを対象に、どの期間で購入すべきかアドバイスをください。",
+        "timestamp": "2025-07-18T13:00:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "西村様\n\nAzure Advisorのコスト推奨事項を確認すると、過去の利用実績に基づいたRIの購入推奨が表示されます。まずはそちらをご確認いただくのが良いかと思います。一般的には、安定稼働している本番VMに対して1年または3年のRIを購入すると大幅な割引が適用されます。",
+        "timestamp": "2025-07-18T13:45:00Z"
+      }
+    ],
+    "resolution": "Azure Advisorの推奨事項を確認する方法を案内。対象VM、スコープ（単一リソースグループ or サブスクリプション）、期間（1年/3年）の選定を支援し、コストシミュレーションを行った上で購入を決定した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-019",
+    "category": "セキュリティ",
+    "title": "ストレージアカウントのアクセスキー管理",
+    "requester": "藤井 聡 (開発部)",
+    "created_at": "2025-07-19T10:10:00Z",
+    "communications": [
+      {
+        "sender": "藤井 聡 (開発部)",
+        "message": "アプリケーションのソースコード内にストレージアカウントのアクセスキーをハードコーディングしてしまっています。より安全な管理方法はありますか？",
+        "timestamp": "2025-07-19T10:10:00Z"
+      }
+    ],
+    "resolution": "Azure Key Vaultにアクセスキーを格納し、アプリケーションからはKey Vaultを参照してキーを取得する方法を提案。App ServiceのマネージドIDを利用すれば、コード内に認証情報を記述することなくKey Vaultにアクセスできる点を説明し、実装を支援した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-020",
+    "category": "データ活用・分析基盤",
+    "title": "Azure Databricksクラスタの起動失敗",
+    "requester": "佐々木 希 (データ分析部)",
+    "created_at": "2025-07-20T15:00:00Z",
+    "communications": [
+      {
+        "sender": "佐々木 希 (データ分析部)",
+        "message": "Databricksで新しいクラスタを起動しようとすると、「Cloud Provider Launch Failure」というエラーで失敗します。原因がわかりません。",
+        "timestamp": "2025-07-20T15:00:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "佐々木様\n\nそのエラーは、多くの場合サブスクリプションのvCPUコア数のクォータ上限に達していることが原因です。利用したいリージョンとVMシリーズのクォータを確認し、不足している場合は上限緩和申請が必要です。",
+        "timestamp": "2025-07-20T15:30:00Z"
+      }
+    ],
+    "resolution": "サブスクリプションのクォータ上限が原因であることを特定。Azure Portalからクォータの確認方法と、サポートリクエストによる上限緩和申請の手順を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-021",
+    "category": "運用・監視",
+    "title": "Log AnalyticsでのKQLクエリについて",
+    "requester": "石川 遼 (運用チーム)",
+    "created_at": "2025-07-21T11:00:00Z",
+    "communications": [
+      {
+        "sender": "石川 遼 (運用チーム)",
+        "message": "特定のIPアドレスからのアクセスログだけを抽出したいのですが、KQLの書き方がわかりません。教えていただけますか？",
+        "timestamp": "2025-07-21T11:00:00Z"
+      }
+    ],
+    "resolution": "対象のログテーブル（例: AppServiceHTTPLogs）に対して `where C-Ip == 'xxx.xxx.xxx.xxx'` のように `where` 句を使ってフィルタリングする方法を案内。よく使うKQLクエリのサンプル集を提供した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-022",
+    "category": "インフラ構築",
+    "title": "カスタムドメインの設定方法",
+    "requester": "前田 敦 (広報部)",
+    "created_at": "2025-07-22T14:50:00Z",
+    "communications": [
+      {
+        "sender": "前田 敦 (広報部)",
+        "message": "App Serviceで作成したWebサイトに、自社で取得したドメイン(example.com)を設定したいです。手順を教えてください。",
+        "timestamp": "2025-07-22T14:50:00Z"
+      }
+    ],
+    "resolution": "DNSプロバイダー側でCNAMEレコード（またはAレコード）をApp ServiceのURLに向けて設定し、Azure PortalのApp Serviceカスタムドメインメニューでドメインの所有権を検証する手順を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-023",
+    "category": "PaaSサービス利用",
+    "title": "Cosmos DBのAPI選定について",
+    "requester": "松本 潤 (開発部)",
+    "created_at": "2025-07-23T10:00:00Z",
+    "communications": [
+      {
+        "sender": "松本 潤 (開発部)",
+        "message": "新規アプリケーションでNoSQLデータベースとしてCosmos DBの利用を検討しています。SQL API, MongoDB APIなど色々ありますが、どれを選べば良いでしょうか？",
+        "timestamp": "2025-07-23T10:00:00Z"
+      }
+    ],
+    "resolution": "各APIの特徴を説明。新規開発で特定のDBへの依存がない場合は、最も機能が豊富なSQL(Core) APIを推奨。既存のMongoDBアプリケーションを移行する場合はMongoDB APIが適しているなど、ユースケースに応じた選定基準を提示した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-024",
+    "category": "認証・認可",
+    "title": "ゲストユーザーの招待方法",
+    "requester": "工藤 静 (営業部)",
+    "created_at": "2025-07-24T16:20:00Z",
+    "communications": [
+      {
+        "sender": "工藤 静 (営業部)",
+        "message": "協業先のパートナー企業の担当者を、Teamsの特定のチームに招待したいです。Azure ADでゲストユーザーとして招待する手順を教えてください。",
+        "timestamp": "2025-07-24T16:20:00Z"
+      }
+    ],
+    "resolution": "Azure ADのユーザー管理画面から「新しいゲストユーザー」を選択し、相手のメールアドレスを入力して招待メールを送信する手順を案内。招待された側の承諾フローについても説明した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-025",
+    "category": "コスト管理・最適化",
+    "title": "Azure Advisorの推奨事項について",
+    "requester": "坂本 龍一 (情報システム部)",
+    "created_at": "2025-07-25T11:30:00Z",
+    "communications": [
+      {
+        "sender": "坂本 龍一 (情報システム部)",
+        "message": "Azure Advisorに「信頼性」の推奨事項として多数の項目が上がっています。これらはすべて対応すべきでしょうか？",
+        "timestamp": "2025-07-25T11:30:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "坂本様\n\nAdvisorの推奨事項はベストプラクティスに基づいたものですが、システムの要件によっては必ずしもすべてに対応する必要はありません。例えば、開発環境のVMに対して本番環境レベルの冗長性を求める推奨は、コストとの兼ね合いで無視する場合もあります。推奨事項ごとに内容を吟味し、対応の要否を判断することが重要です。",
+        "timestamp": "2025-07-25T12:00:00Z"
+      }
+    ],
+    "resolution": "Azure Advisorの推奨事項の重要度と、システムの特性（本番/開発、重要度など）を考慮して、対応の優先順位付けを行うアプローチを提案。各推奨事項の内容を解説し、判断を支援した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-026",
+    "category": "セキュリティ",
+    "title": "NSG(ネットワークセキュリティグループ)の設定",
+    "requester": "池田 勇人 (インフラ部)",
+    "created_at": "2025-07-26T17:00:00Z",
+    "communications": [
+      {
+        "sender": "池田 勇人 (インフラ部)",
+        "message": "WebサーバーのサブネットにNSGを適用し、特定のIPからのみ管理ポート(22, 3389)へのアクセスを許可したいです。受信セキュリティ規則の書き方を教えてください。",
+        "timestamp": "2025-07-26T17:00:00Z"
+      }
+    ],
+    "resolution": "NSGの受信セキュリティ規則で、優先度の高いルールを作成。「ソース」に許可したいIPアドレス(CIDR形式)、「宛先ポート範囲」に22,3389、「アクション」を「許可」に設定。それより優先度の低いルールで、すべてのソースからの同ポートへのアクセスを「拒否」する設定を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-027",
+    "category": "データ活用・分析基盤",
+    "title": "Azure Machine Learningでのモデル学習",
+    "requester": "中田 英寿 (AI開発室)",
+    "created_at": "2025-07-27T13:40:00Z",
+    "communications": [
+      {
+        "sender": "中田 英寿 (AI開発室)",
+        "message": "Azure Machine Learningで学習ジョブを実行したいのですが、コンピューティングインスタンスとコンピューティングクラスターの違いがよくわかりません。どちらを使えば良いですか？",
+        "timestamp": "2025-07-27T13:40:00Z"
+      }
+    ],
+    "resolution": "コンピューティングインスタンスが個人の開発環境（Jupyter Notebook実行など）に適しているのに対し、コンピューティングクラスターはスケーラブルな学習ジョブの実行に適した環境であることを説明。本格的なモデル学習にはコンピューティングクラスターの利用を推奨した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-028",
+    "category": "運用・監視",
+    "title": "Service Healthのアラート設定",
+    "requester": "安藤 美姫 (運用チーム)",
+    "created_at": "2025-07-28T10:10:00Z",
+    "communications": [
+      {
+        "sender": "安藤 美姫 (運用チーム)",
+        "message": "利用しているリージョンでAzureの障害が発生した際に、事前に通知を受け取ることはできますか？",
+        "timestamp": "2025-07-28T10:10:00Z"
+      }
+    ],
+    "resolution": "Azure Service Healthの機能を紹介。自社で利用しているサブスクリプション、リージョン、サービスに影響がある障害情報を確認できる。アクティビティログアラートを作成し、Service Healthのイベントをトリガーとして運用チームに通知する設定を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-029",
+    "category": "インフラ構築",
+    "title": "バックアップ取得方法",
+    "requester": "宮崎 あおい (開発部)",
+    "created_at": "2025-07-29T15:00:00Z",
+    "communications": [
+      {
+        "sender": "宮崎 あおい (開発部)",
+        "message": "VM全体のバックアップを日次で取得したいです。Azure Backupの利用方法を教えてください。",
+        "timestamp": "2025-07-29T15:00:00Z"
+      }
+    ],
+    "resolution": "Recovery Servicesコンテナーを作成し、バックアップポリシー（バックアップ頻度、リテンション期間）を定義。対象のVMをコンテナーに登録することで、定期的なバックアップとリストアが可能になる手順を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-030",
+    "category": "PaaSサービス利用",
+    "title": "App Service Planのスケールアップ",
+    "requester": "遠藤 保仁 (開発部)",
+    "created_at": "2025-07-30T18:00:00Z",
+    "communications": [
+      {
+        "sender": "遠藤 保仁 (開発部)",
+        "message": "Webサイトのレスポンスが遅くなってきました。App Service Planをスケールアップしたいのですが、サービス断は発生しますか？",
+        "timestamp": "2025-07-30T18:00:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "遠藤様\n\n同一レベル内（例: Standardレベル内でのS1→S2）のスケールアップであれば、通常サービス断は発生しません。ただし、レベルを変更する場合（例: Standard→Premium）は、インスタンスの移動が伴うため、短時間のリスタートが発生します。",
+        "timestamp": "2025-07-30T18:20:00Z"
+      }
+    ],
+    "resolution": "App Service Planのスケールアップ（垂直スケール）とスケールアウト（水平スケール）の違いを説明。今回はCPUとメモリの増強が目的のため、スケールアップを実施。サービス影響についても事前に説明し、作業を実施した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-031",
+    "category": "インフラ構築",
+    "title": "ファイルサーバーの構築方法",
+    "requester": "内田 篤人 (総務部)",
+    "created_at": "2025-08-01T11:00:00Z",
+    "communications": [
+      {
+        "sender": "内田 篤人 (総務部)",
+        "message": "社内のファイルサーバーをAzureに移行したいです。Windowsのエクスプローラーからアクセスできるようなサービスはありますか？",
+        "timestamp": "2025-08-01T11:00:00Z"
+      }
+    ],
+    "resolution": "Azure Filesの利用を提案。SMBプロトコルをサポートしているため、オンプレミスのファイルサーバーと同様にエクスプローラーからアクセス可能。Azure ADと連携したアクセス権管理も可能であることを説明し、導入を支援した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-032",
+    "category": "セキュリティ",
+    "title": "Azure Policyでのリソース作成制限",
+    "requester": "長谷部 誠 (ガバナンスチーム)",
+    "created_at": "2025-08-02T14:00:00Z",
+    "communications": [
+      {
+        "sender": "長谷部 誠 (ガバナンスチーム)",
+        "message": "コストの高いVMシリーズ（Gシリーズなど）を、開発者が誤って作成できないように制限したいです。Azure Policyで実現できますか？",
+        "timestamp": "2025-08-02T14:00:00Z"
+      }
+    ],
+    "resolution": "Azure Policyの組み込み定義「許可されている仮想マシンの SKU」を利用する方法を案内。許可するVMのSKUリストをパラメーターとして設定し、管理グループまたはサブスクリプションにポリシーを割り当てることで、指定外のVM作成をブロックできることを説明した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-033",
+    "category": "運用・監視",
+    "title": "Application Insightsでのパフォーマンス分析",
+    "requester": "香川 真司 (開発部)",
+    "created_at": "2025-08-03T16:30:00Z",
+    "communications": [
+      {
+        "sender": "香川 真司 (開発部)",
+        "message": "Web APIの特定の処理だけが遅いようです。Application Insightsを使って、どの部分がボトルネックになっているか調査する方法を教えてください。",
+        "timestamp": "2025-08-03T16:30:00Z"
+      }
+    ],
+    "resolution": "Application Insightsの「パフォーマンス」ブレードの利用方法を案内。サーバーサイドの処理時間、依存関係の呼び出し（DBアクセスなど）にかかる時間などをドリルダウンして分析できる。エンドツーエンドのトランザクション詳細を確認し、ボトルネックとなっているコード箇所を特定する方法をレクチャーした。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-034",
+    "category": "PaaSサービス利用",
+    "title": "Redis Cacheの利用相談",
+    "requester": "岡崎 慎司 (開発部)",
+    "created_at": "2025-08-04T10:45:00Z",
+    "communications": [
+      {
+        "sender": "岡崎 慎司 (開発部)",
+        "message": "DBへのクエリ結果をキャッシュして、アプリケーションの応答速度を改善したいです。Azure Cache for Redisの利用は適切でしょうか？",
+        "timestamp": "2025-08-04T10:45:00Z"
+      }
+    ],
+    "resolution": "Azure Cache for Redisがインメモリの高速なデータストアであり、セッションストアや出力キャッシュとして非常に有効であることを説明。アプリケーションへの組み込み方法（StackExchange.Redisライブラリなど）と、適切な価格レベルの選定を支援した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-035",
+    "category": "コスト管理・最適化",
+    "title": "タグを使ったコストの可視化",
+    "requester": "川島 永嗣 (経理部)",
+    "created_at": "2025-08-05T13:15:00Z",
+    "communications": [
+      {
+        "sender": "川島 永嗣 (経理部)",
+        "message": "プロジェクトごとにAzureのコストを把握したいです。何か良い方法はありますか？",
+        "timestamp": "2025-08-05T13:15:00Z"
+      }
+    ],
+    "resolution": "リソースに「Project」などのキーでタグを付与する運用を提案。Cost Managementのコスト分析でタグによるグループ化表示が可能になり、プロジェクトごとのコストを簡単に可視化できることを説明。タグ付けを強制するAzure Policyの設定も合わせて案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-036",
+    "category": "認証・認可",
+    "title": "条件付きアクセスポリシーでのアクセス元IP制限",
+    "requester": "長友 佑都 (セキュリティチーム)",
+    "created_at": "2025-08-06T15:00:00Z",
+    "communications": [
+      {
+        "sender": "長友 佑都 (セキュリティチーム)",
+        "message": "特定のクラウドアプリケーションへのアクセスを、本社オフィスのIPアドレスからのみに制限したいです。条件付きアクセスポリシーで可能ですか？",
+        "timestamp": "2025-08-06T15:00:00Z"
+      }
+    ],
+    "resolution": "条件付きアクセスポリシーの「場所」条件を利用する方法を案内。「信頼できる場所」として本社のグローバルIPアドレス範囲を登録し、ポリシーの条件としてその場所からのアクセスのみを許可（またはそれ以外の場所をブロック）する設定を支援した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-037",
+    "category": "データ活用・分析基盤",
+    "title": "Azure Cognitive Searchでのインデックス作成",
+    "requester": "本田 圭佑 (新規事業開発室)",
+    "created_at": "2025-08-07T11:20:00Z",
+    "communications": [
+      {
+        "sender": "本田 圭佑 (新規事業開発室)",
+        "message": "社内文書（PDF、Word）を全文検索できるシステムを構築したいです。Azure Cognitive Searchで可能と聞きましたが、どうやって文書を登録すればよいですか？",
+        "timestamp": "2025-08-07T11:20:00Z"
+      }
+    ],
+    "resolution": "Azure Cognitive Searchのインデクサー機能を紹介。データソースとしてAzure Blob Storageを指定し、スケジュール実行を設定することで、Blobにアップロードされたドキュメントを自動的にインデックス化できることを説明。AIエンリッチメントによるキーワード抽出なども可能であることを案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-038",
+    "category": "インフラ構築",
+    "title": "ARMテンプレートでの環境構築",
+    "requester": "吉田 麻也 (開発部)",
+    "created_at": "2025-08-08T17:00:00Z",
+    "communications": [
+      {
+        "sender": "吉田 麻也 (開発部)",
+        "message": "同じ構成の環境を複数作成する必要があるため、コードでインフラを管理したいです。ARMテンプレートの書き方を教えてください。",
+        "timestamp": "2025-08-08T17:00:00Z"
+      }
+    ],
+    "resolution": "ARMテンプレートの基本構造（parameters, variables, resources, outputs）を説明。VS CodeのAzure Resource Manager Tools拡張機能を利用すると、入力補完や構文チェックが効いて便利であることを案内。既存のリソースからテンプレートをエクスポートして学習する方法も紹介した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-039",
+    "category": "セキュリティ",
+    "title": "Key Vaultのアクセス許可モデル",
+    "requester": "酒井 宏樹 (インフラ部)",
+    "created_at": "2025-08-09T10:00:00Z",
+    "communications": [
+      {
+        "sender": "酒井 宏樹 (インフラ部)",
+        "message": "Key Vaultのアクセス許可で、アクセスポリシーとAzure RBACのどちらを使うべきか迷っています。違いを教えてください。",
+        "timestamp": "2025-08-09T10:00:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "酒井様\n\n現在では、より詳細な権限管理が可能なAzure RBACの利用が推奨されています。例えば、ユーザーごとにシークレットの読み取りは許可するが書き込みは禁止する、といった細かい制御が可能です。アクセスポリシーはコンテナー全体への権限付与が基本となります。",
+        "timestamp": "2025-08-09T10:30:00Z"
+      }
+    ],
+    "resolution": "Key Vaultの2つのアクセス許可モデルの違いを説明し、新規で作成する場合はAzure RBAC for Key Vaultを推奨。既存のアクセスポリシーからの移行についても言及した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-040",
+    "category": "PaaSサービス利用",
+    "title": "Event HubsとEvent Gridの違い",
+    "requester": "大迫 勇也 (IoTチーム)",
+    "created_at": "2025-08-10T14:20:00Z",
+    "communications": [
+      {
+        "sender": "大迫 勇也 (IoTチーム)",
+        "message": "大量のデバイスからテレメトリーデータを受信して処理するシステムを検討しています。Event HubsとEvent Gridのどちらが適していますか？",
+        "timestamp": "2025-08-10T14:20:00Z"
+      }
+    ],
+    "resolution": "Event Hubsが大量のイベントストリームを取り込む「パイプライン」であるのに対し、Event Gridはイベントをルーティングする「ディスパッチャー」であるという違いを説明。今回のユースケース（大量のテレメトリー受信）では、Event Hubsが適していることを案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-041",
+    "category": "インフラ構築",
+    "title": "ロードバランサーの選定",
+    "requester": "原口 元気 (インフラ部)",
+    "created_at": "2025-08-11T11:00:00Z",
+    "communications": [
+      {
+        "sender": "原口 元気 (インフラ部)",
+        "message": "Webサーバーの負荷分散で、Azure Load BalancerとApplication Gatewayのどちらを使うべきか悩んでいます。",
+        "timestamp": "2025-08-11T11:00:00Z"
+      }
+    ],
+    "resolution": "Azure Load BalancerがL4（トランスポート層）で動作するのに対し、Application GatewayはL7（アプリケーション層）で動作し、URLパスベースのルーティングやWAF機能を持つことを説明。SSLオフロードやWAFが必要な場合はApplication Gatewayを推奨した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-042",
+    "category": "運用・監視",
+    "title": "リソースの変更履歴の確認",
+    "requester": "柴崎 岳 (監査チーム)",
+    "created_at": "2025-08-12T15:30:00Z",
+    "communications": [
+      {
+        "sender": "柴崎 岳 (監査チーム)",
+        "message": "あるNSGの設定が意図せず変更されていました。いつ、誰が変更したかを確認する方法はありますか？",
+        "timestamp": "2025-08-12T15:30:00Z"
+      }
+    ],
+    "resolution": "Azure Monitorの「アクティビティログ」を確認する方法を案内。リソースグループやリソース単位でフィルタリングし、過去90日間のすべての管理操作（作成、更新、削除）のログ（実行者、時刻、内容）を確認できることを説明した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-043",
+    "category": "コスト管理・最適化",
+    "title": "Azure Hybrid Benefitの適用について",
+    "requester": "槙野 智章 (ライセンス管理)",
+    "created_at": "2025-08-13T10:00:00Z",
+    "communications": [
+      {
+        "sender": "槙野 智章 (ライセンス管理)",
+        "message": "オンプレミスで利用しているWindows Serverのライセンス（ソフトウェアアシュアランス付き）をAzure上のVMで利用して、コストを削減できると聞きました。適用方法を教えてください。",
+        "timestamp": "2025-08-13T10:00:00Z"
+      }
+    ],
+    "resolution": "Azure Hybrid Benefitの概要と適用条件を説明。Azure PortalでVMを作成する際に、ライセンスを所有していることを示すチェックボックスをオンにすることで、OSライセンス費用を除いた料金でVMを利用できることを案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-044",
+    "category": "セキュリティ",
+    "title": "Just-In-Time (JIT) VMアクセスの設定",
+    "requester": "伊東 純也 (セキュリティチーム)",
+    "created_at": "2025-08-14T14:45:00Z",
+    "communications": [
+      {
+        "sender": "伊東 純也 (セキュリティチーム)",
+        "message": "VMの管理ポートを常時開けておくのは危険なので、必要な時だけ一時的に開ける仕組みはありますか？",
+        "timestamp": "2025-08-14T14:45:00Z"
+      }
+    ],
+    "resolution": "Microsoft Defender for CloudのJust-In-Time (JIT) VMアクセス機能を紹介。ユーザーがアクセスを要求し、承認された場合にのみ、指定した時間だけポートを開放する仕組み。設定方法と利用フローを案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-045",
+    "category": "データ活用・分析基盤",
+    "title": "Stream Analyticsのクエリ作成",
+    "requester": "南野 拓実 (IoTチーム)",
+    "created_at": "2025-08-15T16:00:00Z",
+    "communications": [
+      {
+        "sender": "南野 拓実 (IoTチーム)",
+        "message": "Event Hubsから受信したJSON形式のデータを、特定の条件でフィルタリングしてPower BIに出力したいです。Stream Analyticsのクエリはどのように書けばよいですか？",
+        "timestamp": "2025-08-15T16:00:00Z"
+      }
+    ],
+    "resolution": "Stream AnalyticsのSQLライクなクエリ言語を紹介。`SELECT ... INTO [PowerBI-Output] FROM [EventHub-Input] WHERE ...` のような構文で、リアルタイムデータのフィルタリング、集計、変換が可能であることを説明し、サンプルクエリを提供した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-046",
+    "category": "PaaSサービス利用",
+    "title": "API Managementでの流量制御",
+    "requester": "堂安 律 (開発部)",
+    "created_at": "2025-08-16T11:50:00Z",
+    "communications": [
+      {
+        "sender": "堂安 律 (開発部)",
+        "message": "公開APIが特定のユーザーから大量に呼び出され、バックエンドの負荷が高まっています。API Managementで呼び出し回数を制限できますか？",
+        "timestamp": "2025-08-16T11:50:00Z"
+      }
+    ],
+    "resolution": "API Managementのポリシー機能を利用した流量制御（スロットリング）を提案。「rate-limit-by-key」ポリシーを適用し、サブスクリプションキーごとに単位時間あたりの呼び出し回数を制限する方法を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-047",
+    "category": "インフラ構築",
+    "title": "VPN Gatewayの接続トラブル",
+    "requester": "冨安 健洋 (インフラ部)",
+    "created_at": "2025-08-17T17:00:00Z",
+    "communications": [
+      {
+        "sender": "冨安 健洋 (インフラ部)",
+        "message": "オンプレミスの拠点とAzureをVPN Gatewayで接続していますが、突然切断されました。原因調査のポイントを教えてください。",
+        "timestamp": "2025-08-17T17:00:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "冨安様\n\nまずはAzure PortalのVPN接続の状態でエラーメッセージを確認してください。オンプレミス側のVPNデバイスのログと、事前共有キーやIPアドレスなどの設定が双方で一致しているかも再確認が必要です。",
+        "timestamp": "2025-08-17T17:30:00Z"
+      }
+    ],
+    "resolution": "トラブルシューティングの基本的な流れを案内。Azure側の接続状態、オンプレミス側のログ、設定パラメータの不一致などを確認するよう促した。結果、オンプレミス側のルーター設定変更が原因と判明した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-048",
+    "category": "運用・監視",
+    "title": "Azure Monitor Workbookの作成",
+    "requester": "久保 建英 (運用チーム)",
+    "created_at": "2025-08-18T14:00:00Z",
+    "communications": [
+      {
+        "sender": "久保 建英 (運用チーム)",
+        "message": "複数のVMのパフォーマンスメトリック（CPU、メモリ、ディスク）を一つのダッシュボードで可視化したいです。Workbookで作成できますか？",
+        "timestamp": "2025-08-18T14:00:00Z"
+      }
+    ],
+    "resolution": "Azure Monitor Workbookの利用を提案。テキスト、メトリックグラフ、ログクエリ結果などを組み合わせて、インタラクティブなレポートを作成できる。VMのパフォーマンス分析用のテンプレートを利用し、カスタマイズする方法を案内した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-049",
+    "category": "セキュリティ",
+    "title": "DDoS Protectionのプランについて",
+    "requester": "三笘 薫 (セキュリティチーム)",
+    "created_at": "2025-08-19T10:20:00Z",
+    "communications": [
+      {
+        "sender": "三笘 薫 (セキュリティチーム)",
+        "message": "WebサイトのDDoS対策を強化したいです。DDoS ProtectionのBasicとStandardの違いは何ですか？",
+        "timestamp": "2025-08-19T10:20:00Z"
+      }
+    ],
+    "resolution": "BasicプランがAzureプラットフォーム全体で自動的に有効になっているのに対し、StandardプランはVNetに適用する有料サービスであり、より高度な緩和機能、アラート、テレメトリ、WAFとの連携などを提供することを説明。公開Webサイトの保護にはStandardプランを推奨した。",
+    "status": "解決済み"
+  },
+  {
+    "ticket_id": "TICKET-050",
+    "category": "コスト管理・最適化",
+    "title": "請求書に記載のない料金",
+    "requester": "上田 綺世 (経理部)",
+    "created_at": "2025-08-20T11:00:00Z",
+    "communications": [
+      {
+        "sender": "上田 綺世 (経理部)",
+        "message": "Azure Marketplaceで購入したサードパーティ製品の料金が、Azureの請求書に含まれていません。どこで確認できますか？",
+        "timestamp": "2025-08-20T11:00:00Z"
+      },
+      {
+        "sender": "佐藤 次郎 (ITサポート)",
+        "message": "上田様\n\nMarketplaceの製品によっては、Azureの請求とは別に、提供元のベンダーから直接請求される場合があります。購入時の契約をご確認いただくか、Marketplaceの製品ページで請求元をご確認ください。",
+        "timestamp": "2025-08-20T11:30:00Z"
+      }
+    ],
+    "resolution": "Azure Marketplaceの請求モデルには、Microsoft経由とベンダー直接請求の2種類があることを説明。Cost Management上では確認できない場合があるため、提供元への確認を促した。",
+    "status": "解決済み"
+  }
+]
