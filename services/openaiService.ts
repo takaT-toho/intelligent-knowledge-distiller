@@ -99,6 +99,12 @@ export class OpenAIService implements LLMService {
             messages: messages,
             response_format: isJson ? { type: "json_object" } : { type: "text" },
         });
+
+        if (!response || !response.choices || response.choices.length === 0) {
+            console.error("Invalid response structure from API:", response);
+            throw new Error("Received an invalid or empty response from the AI API.");
+        }
+        
         return response.choices[0]?.message.content || "";
     }
     
