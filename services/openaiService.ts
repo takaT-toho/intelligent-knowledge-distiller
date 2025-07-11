@@ -85,6 +85,11 @@ export class OpenAIService implements LLMService {
             }
         }
 
+        console.log("--- OpenAI Client Configuration ---");
+        console.log("Final Base URL for client: ", resolvedBaseURL);
+        console.log("Final Model for client: ", resolvedModel);
+        console.log("---------------------------------");
+
         this.client = new OpenAI({ 
             apiKey: resolvedApiKey,
             dangerouslyAllowBrowser: true,

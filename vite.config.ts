@@ -19,30 +19,34 @@ export default defineConfig(({ mode }) => {
         proxy: {
           '/proxy': {
             changeOrigin: true,
+            logLevel: 'debug',
             router: (req: IncomingMessage) => {
-              // Extract the target URL from the request path
-              // e.g., /proxy/https://example.com/api -> https://example.com
-              const targetUrlStr = req.url?.substring('/proxy/'.length);
+              const requestUrl = req.url || '';
+              console.log(`[Vite Proxy Router] Received request for: ${requestUrl}`);
+              const targetUrlStr = requestUrl.substring('/proxy/'.length);
               if (targetUrlStr) {
                 try {
                   const targetUrl = new URL(targetUrlStr);
+                  console.log(`[Vite Proxy Router] Routing to origin: ${targetUrl.origin}`);
                   return targetUrl.origin;
                 } catch (e) {
-                  console.error('Invalid URL for proxy router:', e);
+                  console.error('[Vite Proxy Router] Invalid URL:', e);
                   return '';
                 }
               }
               return '';
             },
             rewrite: (path) => {
-              // Rewrite the path to be the path of the target URL
-              // e.g., /proxy/https://example.com/api/v1 -> /api/v1
+              console.log(`[Vite Proxy Rewrite] Rewriting path: ${path}`);
               const targetUrlStr = path.substring('/proxy/'.length);
                if (targetUrlStr) {
                 try {
                   const targetUrl = new URL(targetUrlStr);
-                  return targetUrl.pathname + targetUrl.search;
+                  const newPath = targetUrl.pathname + targetUrl.search;
+                  console.log(`[Vite Proxy Rewrite] Rewritten path: ${newPath}`);
+                  return newPath;
                 } catch (e) {
+                  console.error('[Vite Proxy Rewrite] Invalid URL:', e);
                   return '';
                 }
               }
