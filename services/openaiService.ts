@@ -103,14 +103,19 @@ export class OpenAIService implements LLMService {
     }
     
     async discoverCategories(prompt: string, systemPrompt?: string): Promise<Category[]> {
-        const content = await this.generateContent(prompt, true, systemPrompt);
-        const parsed = parseJsonResponse<{ categories: Category[] }>(content);
-        
-        if (!parsed || !Array.isArray(parsed.categories)) {
-            throw new Error("Failed to discover categories. The AI response was malformed.");
+        try {
+            const content = await this.generateContent(prompt, true, systemPrompt);
+            const parsed = parseJsonResponse<{ categories: Category[] }>(content);
+            
+            if (!parsed || !Array.isArray(parsed.categories)) {
+                throw new Error("Failed to discover categories. The AI response was malformed.");
+            }
+            
+            return parsed.categories;
+        } catch (error) {
+            console.error("Error in discoverCategories:", error);
+            throw new Error(`Failed to discover categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-        
-        return parsed.categories;
     }
     
     async categorizeTickets(
@@ -136,19 +141,29 @@ export class OpenAIService implements LLMService {
     }
     
     async synthesizeKnowledge(prompt: string, systemPrompt?: string): Promise<string> {
-        const content = await this.generateContent(prompt, false, systemPrompt);
-        return parseMarkdownResponse(content);
+        try {
+            const content = await this.generateContent(prompt, false, systemPrompt);
+            return parseMarkdownResponse(content);
+        } catch (error) {
+            console.error("Error in synthesizeKnowledge:", error);
+            throw new Error(`Failed to synthesize knowledge: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     }
 
     async discoverSubcategories(prompt: string, systemPrompt?: string): Promise<SubCategory[]> {
-        const content = await this.generateContent(prompt, true, systemPrompt);
-        const parsed = parseJsonResponse<{ subcategories: SubCategory[] }>(content);
+        try {
+            const content = await this.generateContent(prompt, true, systemPrompt);
+            const parsed = parseJsonResponse<{ subcategories: SubCategory[] }>(content);
 
-        if (!parsed || !Array.isArray(parsed.subcategories)) {
-            throw new Error("Failed to discover subcategories. The AI response was malformed.");
+            if (!parsed || !Array.isArray(parsed.subcategories)) {
+                throw new Error("Failed to discover subcategories. The AI response was malformed.");
+            }
+
+            return parsed.subcategories;
+        } catch (error) {
+            console.error("Error in discoverSubcategories:", error);
+            throw new Error(`Failed to discover subcategories: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-
-        return parsed.subcategories;
     }
 
     async categorizeToSubcategories(
