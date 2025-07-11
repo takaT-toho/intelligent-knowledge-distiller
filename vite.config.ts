@@ -22,8 +22,9 @@ export default defineConfig(({ mode }) => {
             router: (req: IncomingMessage) => {
               const requestUrl = req.url || '';
               if (requestUrl.startsWith('/proxy/http')) {
-                const targetUrlStr = requestUrl.substring('/proxy/'.length);
+                let targetUrlStr = '';
                 try {
+                  targetUrlStr = decodeURIComponent(requestUrl.substring('/proxy/'.length));
                   const targetUrl = new URL(targetUrlStr);
                   return targetUrl.origin;
                 } catch (e) {
@@ -35,8 +36,8 @@ export default defineConfig(({ mode }) => {
             rewrite: (path) => {
               const requestUrl = path || '';
               if (requestUrl.startsWith('/proxy/http')) {
-                const targetUrlStr = requestUrl.substring('/proxy/'.length);
                 try {
+                  const targetUrlStr = decodeURIComponent(requestUrl.substring('/proxy/'.length));
                   const targetUrl = new URL(targetUrlStr);
                   return targetUrl.pathname + targetUrl.search;
                 } catch (e) {
