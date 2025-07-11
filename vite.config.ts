@@ -19,34 +19,27 @@ export default defineConfig(({ mode }) => {
         proxy: {
           '/proxy': {
             changeOrigin: true,
-            logLevel: 'debug',
             router: (req: IncomingMessage) => {
               const requestUrl = req.url || '';
-              console.log(`[Vite Proxy Router] Received request for: ${requestUrl}`);
               const targetUrlStr = requestUrl.substring('/proxy/'.length);
               if (targetUrlStr) {
                 try {
                   const targetUrl = new URL(targetUrlStr);
-                  console.log(`[Vite Proxy Router] Routing to origin: ${targetUrl.origin}`);
                   return targetUrl.origin;
                 } catch (e) {
-                  console.error('[Vite Proxy Router] Invalid URL:', e);
+                  console.error('[Vite Proxy Router] Invalid URL in request:', e);
                   return '';
                 }
               }
               return '';
             },
             rewrite: (path) => {
-              console.log(`[Vite Proxy Rewrite] Rewriting path: ${path}`);
               const targetUrlStr = path.substring('/proxy/'.length);
                if (targetUrlStr) {
                 try {
                   const targetUrl = new URL(targetUrlStr);
-                  const newPath = targetUrl.pathname + targetUrl.search;
-                  console.log(`[Vite Proxy Rewrite] Rewritten path: ${newPath}`);
-                  return newPath;
+                  return targetUrl.pathname + targetUrl.search;
                 } catch (e) {
-                  console.error('[Vite Proxy Rewrite] Invalid URL:', e);
                   return '';
                 }
               }

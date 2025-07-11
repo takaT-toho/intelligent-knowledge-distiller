@@ -53,7 +53,7 @@ export class OpenAIService implements LLMService {
         }
 
         // Check if the baseURL is a full, absolute Azure-like endpoint URL for chat completions.
-        // This logic should run on the original URL before it was proxied.
+        // This logic should run on the original URL before it was proxied, to extract model and api-version.
         const originalURL = baseURL || "";
         if (originalURL.startsWith('http') && originalURL.includes('/openai/deployments/')) {
             try {
@@ -61,14 +61,7 @@ export class OpenAIService implements LLMService {
                 const apiVersion = url.searchParams.get('api-version');
                 if (apiVersion) {
                     defaultQuery = { 'api-version': apiVersion };
-                    url.searchParams.delete('api-version');
                 }
-
-                // The baseURL for the client should not include /chat/completions
-                if (url.pathname.endsWith('/chat/completions')) {
-                    url.pathname = url.pathname.substring(0, url.pathname.lastIndexOf('/chat/completions'));
-                }
-                resolvedBaseURL = url.toString();
                 
                 // Extract deployment name to use as model
                 const pathParts = url.pathname.split('/');
@@ -84,11 +77,6 @@ export class OpenAIService implements LLMService {
                 resolvedModel = model || "gpt-4.1-nano";
             }
         }
-
-        console.log("--- OpenAI Client Configuration ---");
-        console.log("Final Base URL for client: ", resolvedBaseURL);
-        console.log("Final Model for client: ", resolvedModel);
-        console.log("---------------------------------");
 
         this.client = new OpenAI({ 
             apiKey: resolvedApiKey,
