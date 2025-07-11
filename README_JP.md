@@ -27,6 +27,8 @@
 使用するLLMプロバイダーを選択します。
 
 - **GEMINI**: GoogleのGeminiモデルを使用します。APIキーは `.env` ファイルで設定する必要があります。
+    - **モデルの変更**:
+        現在、使用されるGeminiモデルはソースコード内で直接指定されています。モデルを変更するには、`services/geminiService.ts` ファイル内の `generateContent` メソッドにある `model` の値を、希望するモデル名（例: `'gemini-2.5-flash-preview-04-17'`）に書き換えてください。
 - **OPENAI**: OpenAIのモデル、または互換API（Azure OpenAIなど）を使用します。
 
 ### OpenAI / Azure OpenAI (AOAI) の設定
