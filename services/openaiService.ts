@@ -41,16 +41,23 @@ export class OpenAIService implements LLMService {
         let defaultQuery: Record<string, any> | undefined = undefined;
         let resolvedModel = model || "gpt-4.1-nano";
 
+        // To avoid CORS issues, route all non-localhost http requests through the local proxy.
+        if (resolvedBaseURL.startsWith('http') && !resolvedBaseURL.includes('localhost')) {
+            resolvedBaseURL = `/proxy/${resolvedBaseURL}`;
+        }
+
         // If baseURL is a relative path (for proxy), make it absolute by prepending the current origin.
         // This is necessary as the OpenAI client library seems to require an absolute URL.
         if (resolvedBaseURL.startsWith('/')) {
             resolvedBaseURL = `${window.location.origin}${resolvedBaseURL}`;
         }
 
-        // Check if the baseURL is a full, absolute Azure-like endpoint URL for chat completions
-        if (resolvedBaseURL.startsWith('http') && resolvedBaseURL.includes('/openai/deployments/')) {
+        // Check if the baseURL is a full, absolute Azure-like endpoint URL for chat completions.
+        // This logic should run on the original URL before it was proxied.
+        const originalURL = baseURL || "";
+        if (originalURL.startsWith('http') && originalURL.includes('/openai/deployments/')) {
             try {
-                const url = new URL(resolvedBaseURL);
+                const url = new URL(originalURL);
                 const apiVersion = url.searchParams.get('api-version');
                 if (apiVersion) {
                     defaultQuery = { 'api-version': apiVersion };
@@ -71,19 +78,12 @@ export class OpenAIService implements LLMService {
                 }
             } catch (error) {
                 console.error("Error parsing Azure-like URL. Falling back to default behavior.", error);
-                // Reset to defaults if URL parsing fails
-                resolvedBaseURL = baseURL || "https://api.openai.com/v1";
+                // Reset to defaults if URL parsing fails.
+                // Note: We don't reset resolvedBaseURL here as it might be the proxied URL.
                 defaultQuery = undefined;
                 resolvedModel = model || "gpt-4.1-nano";
             }
         }
-
-        console.log("--- OpenAI Client Configuration ---");
-        console.log("API Key Used: ", resolvedApiKey ? `${resolvedApiKey.substring(0, 5)}...` : "Not Set");
-        console.log("Base URL: ", resolvedBaseURL);
-        console.log("Model: ", resolvedModel);
-        console.log("Default Query: ", defaultQuery);
-        console.log("---------------------------------");
 
         this.client = new OpenAI({ 
             apiKey: resolvedApiKey,

@@ -1,5 +1,6 @@
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
+import { IncomingMessage } from 'http';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
@@ -17,9 +18,36 @@ export default defineConfig(({ mode }) => {
       server: {
         proxy: {
           '/proxy': {
-            target: env.VITE_PROXY_TARGET,
             changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/proxy/, ''),
+            router: (req: IncomingMessage) => {
+              // Extract the target URL from the request path
+              // e.g., /proxy/https://example.com/api -> https://example.com
+              const targetUrlStr = req.url?.substring('/proxy/'.length);
+              if (targetUrlStr) {
+                try {
+                  const targetUrl = new URL(targetUrlStr);
+                  return targetUrl.origin;
+                } catch (e) {
+                  console.error('Invalid URL for proxy router:', e);
+                  return '';
+                }
+              }
+              return '';
+            },
+            rewrite: (path) => {
+              // Rewrite the path to be the path of the target URL
+              // e.g., /proxy/https://example.com/api/v1 -> /api/v1
+              const targetUrlStr = path.substring('/proxy/'.length);
+               if (targetUrlStr) {
+                try {
+                  const targetUrl = new URL(targetUrlStr);
+                  return targetUrl.pathname + targetUrl.search;
+                } catch (e) {
+                  return '';
+                }
+              }
+              return '';
+            },
           },
         },
       },
