@@ -3,10 +3,10 @@ import { Category, SubCategory, CategorizedTicketResult, SubCategorizedTicketRes
 import { LLMService } from './llmService';
 
 const PROXY_SERVER_URL = 'http://localhost:3001';
+const DEFAULT_OPENAI_URL = "https://api.openai.com/v1";
 
 const parseJsonResponse = <T,>(text: string): T => {
     if (typeof text !== 'string') {
-        console.error("Invalid input to parseJsonResponse: not a string", text);
         text = JSON.stringify(text);
     }
     let jsonStr = text.trim();
@@ -37,24 +37,26 @@ export class OpenAIService implements LLMService {
     private apiKey: string;
     private baseURL: string;
     private model: string;
-    private isAzure: boolean;
-    private standardClient: OpenAI; // For standard OpenAI calls
+    private useProxy: boolean;
+    private standardClient: OpenAI;
 
     constructor(apiKey?: string, baseURL?: string, model?: string) {
         this.apiKey = apiKey || process.env.OPENAI_API_KEY || "";
-        this.baseURL = baseURL || "https://api.openai.com/v1";
+        this.baseURL = baseURL || DEFAULT_OPENAI_URL;
         this.model = model || "gpt-4.1-nano";
-        this.isAzure = this.baseURL.includes('.openai.azure.com');
+        
+        // Use the proxy for any URL that is not the default OpenAI URL.
+        this.useProxy = this.baseURL !== DEFAULT_OPENAI_URL;
 
-        // Always create a standard client for the default case or as a fallback
+        // The standard client is used ONLY for the default OpenAI URL.
         this.standardClient = new OpenAI({
             apiKey: this.apiKey,
             dangerouslyAllowBrowser: true,
-            baseURL: "https://api.openai.com/v1",
+            baseURL: DEFAULT_OPENAI_URL,
         });
         
-        // If it's an Azure URL, parse the deployment name to use as the model
-        if (this.isAzure) {
+        // If it's a custom URL (likely Azure), parse the deployment name to use as the model.
+        if (this.useProxy) {
             try {
                 const url = new URL(this.baseURL);
                 if (url.pathname.includes('/openai/deployments/')) {
@@ -65,7 +67,7 @@ export class OpenAIService implements LLMService {
                     }
                 }
             } catch (e) { 
-                console.error("Could not parse Azure URL to extract deployment name:", e);
+                console.error("Could not parse custom URL to extract deployment name:", e);
             }
         }
     }
@@ -77,9 +79,8 @@ export class OpenAIService implements LLMService {
         }
         messages.push({ role: "user", content: prompt });
 
-        // If it's a custom URL (Azure), use the backend proxy.
-        // Otherwise, use the standard OpenAI client directly.
-        if (this.isAzure) {
+        if (this.useProxy) {
+            // Use the backend proxy for all custom URLs to handle CORS.
             const body = {
                 baseURL: this.baseURL,
                 apiKey: this.apiKey,
@@ -103,7 +104,7 @@ export class OpenAIService implements LLMService {
             const responseData = await response.json();
             return responseData.choices[0]?.message?.content || "";
         } else {
-            // Standard OpenAI call
+            // Use the standard OpenAI client directly for the default URL.
             const response = await this.standardClient.chat.completions.create({
                 model: this.model,
                 messages: messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
