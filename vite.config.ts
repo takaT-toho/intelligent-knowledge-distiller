@@ -19,40 +19,31 @@ export default defineConfig(({ mode }) => {
         proxy: {
           '/proxy': {
             changeOrigin: true,
-            logLevel: 'debug',
             router: (req: IncomingMessage) => {
               const requestUrl = req.url || '';
-              console.log(`[VITE_PROXY_ROUTER] Incoming request: ${requestUrl}`);
-              if (!requestUrl.startsWith('/proxy/http')) {
-                console.error(`[VITE_PROXY_ROUTER] ERROR: Request does not seem to contain a valid URL: ${requestUrl}`);
-                return 'http://localhost:9999'; // Return a dummy target to avoid crash
+              if (requestUrl.startsWith('/proxy/http')) {
+                const targetUrlStr = requestUrl.substring('/proxy/'.length);
+                try {
+                  const targetUrl = new URL(targetUrlStr);
+                  return targetUrl.origin;
+                } catch (e) {
+                  console.error(`[Vite Proxy Router] Invalid URL in request: ${targetUrlStr}`, e);
+                }
               }
-              const targetUrlStr = requestUrl.substring('/proxy/'.length);
-              try {
-                const targetUrl = new URL(targetUrlStr);
-                console.log(`[VITE_PROXY_ROUTER] Routing to: ${targetUrl.origin}`);
-                return targetUrl.origin;
-              } catch (e) {
-                console.error(`[VITE_PROXY_ROUTER] ERROR: Failed to parse URL '${targetUrlStr}'.`, e);
-                return 'http://localhost:9999'; // Return a dummy target to avoid crash
-              }
+              return 'http://localhost:9999'; // Return a dummy target to prevent crash
             },
             rewrite: (path) => {
-              console.log(`[VITE_PROXY_REWRITE] Original path: ${path}`);
-              if (!path.startsWith('/proxy/http')) {
-                 console.error(`[VITE_PROXY_REWRITE] ERROR: Path does not seem to contain a valid URL: ${path}`);
-                 return '/'; // Return a safe path
+              const requestUrl = path || '';
+              if (requestUrl.startsWith('/proxy/http')) {
+                const targetUrlStr = requestUrl.substring('/proxy/'.length);
+                try {
+                  const targetUrl = new URL(targetUrlStr);
+                  return targetUrl.pathname + targetUrl.search;
+                } catch (e) {
+                  // Let the original path go through to show the error
+                }
               }
-              const targetUrlStr = path.substring('/proxy/'.length);
-              try {
-                const targetUrl = new URL(targetUrlStr);
-                const newPath = targetUrl.pathname + targetUrl.search;
-                console.log(`[VITE_PROXY_REWRITE] Rewritten path: ${newPath}`);
-                return newPath;
-              } catch (e) {
-                console.error(`[VITE_PROXY_REWRITE] ERROR: Failed to parse URL in path '${targetUrlStr}'.`, e);
-                return '/'; // Return a safe path
-              }
+              return path;
             },
           },
         },

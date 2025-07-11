@@ -41,20 +41,25 @@ export class OpenAIService implements LLMService {
         let defaultQuery: Record<string, any> | undefined = undefined;
         let resolvedModel = model || "gpt-4.1-nano";
 
+        // If the user provides a URL with /chat/completions, strip it off
+        // as the client library appends it automatically.
+        if (resolvedBaseURL.includes('/chat/completions')) {
+            resolvedBaseURL = resolvedBaseURL.substring(0, resolvedBaseURL.lastIndexOf('/chat/completions'));
+        }
+
+        const originalURL = resolvedBaseURL;
+
         // To avoid CORS issues, route all non-localhost http requests through the local proxy.
         if (resolvedBaseURL.startsWith('http') && !resolvedBaseURL.includes('localhost')) {
             resolvedBaseURL = `/proxy/${resolvedBaseURL}`;
         }
-
+        
         // If baseURL is a relative path (for proxy), make it absolute by prepending the current origin.
-        // This is necessary as the OpenAI client library seems to require an absolute URL.
         if (resolvedBaseURL.startsWith('/')) {
             resolvedBaseURL = `${window.location.origin}${resolvedBaseURL}`;
         }
 
-        // Check if the baseURL is a full, absolute Azure-like endpoint URL for chat completions.
-        // This logic should run on the original URL before it was proxied, to extract model and api-version.
-        const originalURL = baseURL || "";
+        // Parse the original URL for Azure-specific details, but do not overwrite the proxied URL.
         if (originalURL.startsWith('http') && originalURL.includes('/openai/deployments/')) {
             try {
                 const url = new URL(originalURL);
@@ -63,16 +68,18 @@ export class OpenAIService implements LLMService {
                     defaultQuery = { 'api-version': apiVersion };
                 }
                 
-                // Extract deployment name to use as model
                 const pathParts = url.pathname.split('/');
                 const deploymentIndex = pathParts.indexOf('deployments');
                 if (deploymentIndex > -1 && pathParts.length > deploymentIndex + 1) {
-                    resolvedModel = pathParts[deploymentIndex + 1];
+                    let modelName = pathParts[deploymentIndex + 1];
+                    // If the model name from URL ends with /chat/completions, remove it
+                    if (modelName.endsWith('/chat/completions')) {
+                        modelName = modelName.substring(0, modelName.lastIndexOf('/chat/completions'));
+                    }
+                    resolvedModel = modelName;
                 }
             } catch (error) {
                 console.error("Error parsing Azure-like URL. Falling back to default behavior.", error);
-                // Reset to defaults if URL parsing fails.
-                // Note: We don't reset resolvedBaseURL here as it might be the proxied URL.
                 defaultQuery = undefined;
                 resolvedModel = model || "gpt-4.1-nano";
             }
@@ -99,29 +106,18 @@ export class OpenAIService implements LLMService {
             messages: messages,
             response_format: isJson ? { type: "json_object" } : { type: "text" },
         });
-
-        if (!response || !response.choices || response.choices.length === 0) {
-            console.error("Invalid response structure from API:", response);
-            throw new Error("Received an invalid or empty response from the AI API.");
-        }
-        
         return response.choices[0]?.message.content || "";
     }
     
     async discoverCategories(prompt: string, systemPrompt?: string): Promise<Category[]> {
-        try {
-            const content = await this.generateContent(prompt, true, systemPrompt);
-            const parsed = parseJsonResponse<{ categories: Category[] }>(content);
-            
-            if (!parsed || !Array.isArray(parsed.categories)) {
-                throw new Error("Failed to discover categories. The AI response was malformed.");
-            }
-            
-            return parsed.categories;
-        } catch (error) {
-            console.error("Error in discoverCategories:", error);
-            throw new Error(`Failed to discover categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const content = await this.generateContent(prompt, true, systemPrompt);
+        const parsed = parseJsonResponse<{ categories: Category[] }>(content);
+        
+        if (!parsed || !Array.isArray(parsed.categories)) {
+            throw new Error("Failed to discover categories. The AI response was malformed.");
         }
+        
+        return parsed.categories;
     }
     
     async categorizeTickets(
@@ -147,29 +143,19 @@ export class OpenAIService implements LLMService {
     }
     
     async synthesizeKnowledge(prompt: string, systemPrompt?: string): Promise<string> {
-        try {
-            const content = await this.generateContent(prompt, false, systemPrompt);
-            return parseMarkdownResponse(content);
-        } catch (error) {
-            console.error("Error in synthesizeKnowledge:", error);
-            throw new Error(`Failed to synthesize knowledge: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+        const content = await this.generateContent(prompt, false, systemPrompt);
+        return parseMarkdownResponse(content);
     }
 
     async discoverSubcategories(prompt: string, systemPrompt?: string): Promise<SubCategory[]> {
-        try {
-            const content = await this.generateContent(prompt, true, systemPrompt);
-            const parsed = parseJsonResponse<{ subcategories: SubCategory[] }>(content);
+        const content = await this.generateContent(prompt, true, systemPrompt);
+        const parsed = parseJsonResponse<{ subcategories: SubCategory[] }>(content);
 
-            if (!parsed || !Array.isArray(parsed.subcategories)) {
-                throw new Error("Failed to discover subcategories. The AI response was malformed.");
-            }
-
-            return parsed.subcategories;
-        } catch (error) {
-            console.error("Error in discoverSubcategories:", error);
-            throw new Error(`Failed to discover subcategories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        if (!parsed || !Array.isArray(parsed.subcategories)) {
+            throw new Error("Failed to discover subcategories. The AI response was malformed.");
         }
+
+        return parsed.subcategories;
     }
 
     async categorizeToSubcategories(

@@ -40,16 +40,15 @@
 
 - **OpenAI API Base URL**:
   - APIのエンドポイントURLを指定します。
-  - **Azure OpenAI (AOAI) を使用する場合**: 以下のような、デプロイメントIDを含む完全なURLから、末尾の `/chat/completions` を **除いた** 部分を入力します。
-    - 例: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID`
-    - 元のURL: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID/chat/completions?api-version=2024-02-01`
+  - **Azure OpenAI (AOAI) を使用する場合**: 完全なエンドポイントURLをそのまま貼り付けることができます。アプリケーションが自動的に処理します。
+    - 例: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID/chat/completions?api-version=2024-02-01`
 
 - **OpenAI Model (任意)**:
   - モデル名を指定します。
   - **Azure OpenAI (AOAI) を使用する場合**: ここに **デプロイメント名** を入力します。（例: `gpt-4.1-nano`）
   - 空欄の場合、またはURLからモデル名を自動抽出できない場合は、デフォルトのモデルが使用されます。
 
-**注**: 開発環境でAzure OpenAIなどの外部APIを利用する際に発生するCORSエラーは、Viteに内蔵されたプロキシ機能によって自動的に回避されます。
+**CORSエラーについて**: 開発環境で外部API（Azure OpenAIなど）を利用する際に発生するCORSエラーは、内蔵のプロキシ機能によって自動的に回避されます。特別な設定は不要です。
 
 ## アーキテクチャと処理フロー
 

@@ -40,16 +40,15 @@ When you select `OPENAI` as the provider, the following fields become available:
 
 - **OpenAI API Base URL**:
   - Specify the API endpoint URL.
-  - **For Azure OpenAI (AOAI)**: Enter the URL for your deployment, **excluding** the trailing `/chat/completions`.
-    - Example: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID`
-    - From the original URL: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID/chat/completions?api-version=2024-02-01`
+  - **For Azure OpenAI (AOAI)**: You can paste the full endpoint URL directly. The application will automatically handle it.
+    - Example: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID/chat/completions?api-version=2024-02-01`
 
 - **OpenAI Model (Optional)**:
   - Specify the model name.
   - **For Azure OpenAI (AOAI)**: Enter your **Deployment Name** here (e.g., `gpt-4.1-nano`).
   - If left blank, or if the model cannot be automatically extracted from the URL, a default model will be used.
 
-**Note**: CORS errors that may occur when using external APIs (like Azure OpenAI) in a development environment are automatically handled by a built-in proxy.
+**Note on CORS**: Any CORS (Cross-Origin Resource Sharing) errors that occur when using external APIs during local development are automatically handled by a built-in proxy. You do not need to perform any special configuration.
 
 ## Architecture and Processing Flow
 
