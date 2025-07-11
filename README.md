@@ -44,11 +44,11 @@ When you select `OPENAI` as the provider, the following fields become available:
     - Example: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID/chat/completions?api-version=2024-02-01`
 
 - **OpenAI Model (Optional)**:
-  - Specify the model name.
-  - **For Azure OpenAI (AOAI)**: Enter your **Deployment Name** here (e.g., `gpt-4.1-nano`).
-  - If left blank, or if the model cannot be automatically extracted from the URL, a default model will be used.
+  - This field is generally not required when using Azure, as the deployment name is automatically extracted from the Base URL.
 
-**Note on CORS**: Any CORS (Cross-Origin Resource Sharing) errors that occur when using external APIs during local development are automatically handled by a built-in proxy. You do not need to perform any special configuration.
+### CORS Handling
+
+This project includes a simple Node.js Express server that acts as a proxy to handle CORS (Cross-Origin Resource Sharing) errors. When you run `npm run dev`, this proxy server starts automatically alongside the Vite development server. All external API requests from the application are routed through this local proxy, which then forwards them to the actual API endpoint (like Azure OpenAI). This approach completely avoids browser-based CORS issues.
 
 ## Architecture and Processing Flow
 

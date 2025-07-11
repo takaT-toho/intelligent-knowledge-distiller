@@ -2,11 +2,13 @@ import OpenAI from "openai";
 import { Category, SubCategory, CategorizedTicketResult, SubCategorizedTicketResult } from '../types';
 import { LLMService } from './llmService';
 
-if (!process.env.OPENAI_API_KEY) {
-    console.warn("OPENAI_API_KEY environment variable not set. The application will not be able to connect to the OpenAI API.");
-}
+const PROXY_SERVER_URL = 'http://localhost:3001';
 
 const parseJsonResponse = <T,>(text: string): T => {
+    if (typeof text !== 'string') {
+        console.error("Invalid input to parseJsonResponse: not a string", text);
+        text = JSON.stringify(text);
+    }
     let jsonStr = text.trim();
     const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
     const match = jsonStr.match(fenceRegex);
@@ -32,97 +34,91 @@ const parseMarkdownResponse = (text: string): string => {
 };
 
 export class OpenAIService implements LLMService {
-    private client: OpenAI;
+    private apiKey: string;
+    private baseURL: string;
     private model: string;
-    
+    private isAzure: boolean;
+    private standardClient: OpenAI; // For standard OpenAI calls
+
     constructor(apiKey?: string, baseURL?: string, model?: string) {
-        const resolvedApiKey = apiKey || process.env.OPENAI_API_KEY || "";
-        let resolvedBaseURL = baseURL || "https://api.openai.com/v1";
-        let defaultQuery: Record<string, any> | undefined = undefined;
-        let resolvedModel = model || "gpt-4.1-nano";
+        this.apiKey = apiKey || process.env.OPENAI_API_KEY || "";
+        this.baseURL = baseURL || "https://api.openai.com/v1";
+        this.model = model || "gpt-4.1-nano";
+        this.isAzure = this.baseURL.includes('.openai.azure.com');
 
-        // If the user provides a URL with /chat/completions, strip it off
-        // as the client library appends it automatically.
-        if (resolvedBaseURL.includes('/chat/completions')) {
-            resolvedBaseURL = resolvedBaseURL.substring(0, resolvedBaseURL.lastIndexOf('/chat/completions'));
-        }
-
-        const originalURL = resolvedBaseURL;
-
-        // To avoid CORS issues, route all non-localhost http requests through the local proxy.
-        if (resolvedBaseURL.startsWith('http') && !resolvedBaseURL.includes('localhost')) {
-            resolvedBaseURL = `/proxy/${resolvedBaseURL}`;
-        }
+        // Always create a standard client for the default case or as a fallback
+        this.standardClient = new OpenAI({
+            apiKey: this.apiKey,
+            dangerouslyAllowBrowser: true,
+            baseURL: "https://api.openai.com/v1",
+        });
         
-        // If baseURL is a relative path (for proxy), make it absolute by prepending the current origin.
-        if (resolvedBaseURL.startsWith('/')) {
-            resolvedBaseURL = `${window.location.origin}${resolvedBaseURL}`;
-        }
-
-        // Parse the original URL for Azure-specific details, but do not overwrite the proxied URL.
-        if (originalURL.startsWith('http') && originalURL.includes('/openai/deployments/')) {
+        // If it's an Azure URL, parse the deployment name to use as the model
+        if (this.isAzure) {
             try {
-                const url = new URL(originalURL);
-                const apiVersion = url.searchParams.get('api-version');
-                if (apiVersion) {
-                    // Manually append api-version to the proxied URL instead of using defaultQuery
-                    if (resolvedBaseURL.includes('/proxy/')) {
-                        resolvedBaseURL += `?api-version=${apiVersion}`;
-                    } else {
-                        defaultQuery = { 'api-version': apiVersion };
+                const url = new URL(this.baseURL);
+                if (url.pathname.includes('/openai/deployments/')) {
+                    const pathParts = url.pathname.split('/');
+                    const deploymentIndex = pathParts.indexOf('deployments');
+                    if (deploymentIndex > -1 && pathParts.length > deploymentIndex + 1) {
+                        this.model = pathParts[deploymentIndex + 1];
                     }
                 }
-                
-                const pathParts = url.pathname.split('/');
-                const deploymentIndex = pathParts.indexOf('deployments');
-                if (deploymentIndex > -1 && pathParts.length > deploymentIndex + 1) {
-                    let modelName = pathParts[deploymentIndex + 1];
-                    // If the model name from URL ends with /chat/completions, remove it
-                    if (modelName.endsWith('/chat/completions')) {
-                        modelName = modelName.substring(0, modelName.lastIndexOf('/chat/completions'));
-                    }
-                    resolvedModel = modelName;
-                }
-            } catch (error) {
-                console.error("Error parsing Azure-like URL. Falling back to default behavior.", error);
-                defaultQuery = undefined;
-                resolvedModel = model || "gpt-4.1-nano";
+            } catch (e) { 
+                console.error("Could not parse Azure URL to extract deployment name:", e);
             }
         }
-
-        this.client = new OpenAI({ 
-            apiKey: resolvedApiKey,
-            dangerouslyAllowBrowser: true,
-            baseURL: resolvedBaseURL,
-            // defaultQuery is not used when manually appending api-version for proxy
-            defaultQuery: resolvedBaseURL.includes('/proxy/') ? undefined : defaultQuery
-        });
-        this.model = resolvedModel;
     }
 
     private async generateContent(prompt: string, isJson: boolean, systemPrompt?: string): Promise<string> {
-        const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+        const messages: { role: string; content: string }[] = [];
         if (systemPrompt) {
             messages.push({ role: "system", content: systemPrompt });
         }
         messages.push({ role: "user", content: prompt });
 
-        const response = await this.client.chat.completions.create({
-            model: this.model,
-            messages: messages,
-            response_format: isJson ? { type: "json_object" } : { type: "text" },
-        });
-        return response.choices[0]?.message.content || "";
+        // If it's a custom URL (Azure), use the backend proxy.
+        // Otherwise, use the standard OpenAI client directly.
+        if (this.isAzure) {
+            const body = {
+                baseURL: this.baseURL,
+                apiKey: this.apiKey,
+                model: this.model,
+                messages,
+                response_format: isJson ? { type: "json_object" } : { type: "text" },
+            };
+
+            const response = await fetch(`${PROXY_SERVER_URL}/api/openai/chat/completions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ details: response.statusText }));
+                console.error('Error from proxy server:', errorData);
+                throw new Error(`API request failed via proxy with status ${response.status}: ${errorData.details || errorData.error}`);
+            }
+
+            const responseData = await response.json();
+            return responseData.choices[0]?.message?.content || "";
+        } else {
+            // Standard OpenAI call
+            const response = await this.standardClient.chat.completions.create({
+                model: this.model,
+                messages: messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+                response_format: isJson ? { type: "json_object" } : { type: "text" },
+            });
+            return response.choices[0]?.message.content || "";
+        }
     }
     
     async discoverCategories(prompt: string, systemPrompt?: string): Promise<Category[]> {
         const content = await this.generateContent(prompt, true, systemPrompt);
         const parsed = parseJsonResponse<{ categories: Category[] }>(content);
-        
         if (!parsed || !Array.isArray(parsed.categories)) {
             throw new Error("Failed to discover categories. The AI response was malformed.");
         }
-        
         return parsed.categories;
     }
     
@@ -135,7 +131,6 @@ export class OpenAIService implements LLMService {
             try {
                 const content = await this.generateContent(prompt, true, systemPrompt);
                 const parsed = parseJsonResponse<{ assignments: CategorizedTicketResult[] }>(content);
-                
                 onProgress(index);
                 return parsed.assignments || null;
             } catch (e) {
@@ -144,7 +139,6 @@ export class OpenAIService implements LLMService {
                 return null;
             }
         });
-        
         return Promise.all(promises);
     }
     
@@ -156,11 +150,9 @@ export class OpenAIService implements LLMService {
     async discoverSubcategories(prompt: string, systemPrompt?: string): Promise<SubCategory[]> {
         const content = await this.generateContent(prompt, true, systemPrompt);
         const parsed = parseJsonResponse<{ subcategories: SubCategory[] }>(content);
-
         if (!parsed || !Array.isArray(parsed.subcategories)) {
             throw new Error("Failed to discover subcategories. The AI response was malformed.");
         }
-
         return parsed.subcategories;
     }
 
@@ -173,7 +165,6 @@ export class OpenAIService implements LLMService {
             try {
                 const content = await this.generateContent(prompt, true, systemPrompt);
                 const parsed = parseJsonResponse<{ assignments: SubCategorizedTicketResult[] }>(content);
-
                 onProgress(index);
                 return parsed.assignments || null;
             } catch (e) {
@@ -182,7 +173,6 @@ export class OpenAIService implements LLMService {
                 return null;
             }
         });
-
         return Promise.all(promises);
     }
 
@@ -195,7 +185,6 @@ ${prompt}
 # Task
 Rewrite the prompt to be more specific, clear, and effective for the "${domain}" domain. Maintain the original JSON output format if one was requested. The revised prompt should guide the AI to produce more accurate and relevant results for this domain. Do not wrap the output in markdown or any other formatting. Just return the raw, optimized prompt.`;
         
-        // The system prompt for optimization itself is the optimization prompt.
         return this.generateContent(optimizationPrompt, false, systemPrompt);
     }
 }

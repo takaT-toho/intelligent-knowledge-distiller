@@ -4,12 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"vite\" \"node server.js\"",
+    "start": "node server.js",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@google/genai": "^1.8.0",
+    "axios": "^1.10.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "i18next": "^25.3.1",
     "i18next-http-backend": "^3.0.2",
     "openai": "^5.8.2",
@@ -22,6 +26,7 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@types/react-dom": "^19.1.6",
+    "concurrently": "^8.2.2",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
   }
