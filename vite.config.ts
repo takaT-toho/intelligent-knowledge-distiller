@@ -13,6 +13,15 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      }
+      },
+      server: {
+        proxy: {
+          '/proxy': {
+            target: env.VITE_PROXY_TARGET,
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/proxy/, ''),
+          },
+        },
+      },
     };
 });

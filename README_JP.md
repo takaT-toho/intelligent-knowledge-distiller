@@ -35,7 +35,7 @@
 
 - **OpenAI API Key**:
   - APIキーを入力します。
-  - ここで入力したキーは、環境変数（`.env` ファイル）に設定されたキーよりも優先されます。
+  - ここで入力したキーは、環境変数（`.env.local` ファイル）に設定されたキーよりも優先されます。
   - 空欄の場合は、環境変数に設定された `OPENAI_API_KEY` が使用されます。
 
 - **OpenAI API Base URL**:
@@ -48,6 +48,29 @@
   - モデル名を指定します。
   - **Azure OpenAI (AOAI) を使用する場合**: ここに **デプロイメント名** を入力します。（例: `gpt-4.1-nano`）
   - 空欄の場合、またはURLからモデル名を自動抽出できない場合は、デフォルトのモデルが使用されます。
+
+### トラブルシューティング: CORSエラー
+
+外部のAPI（Azure OpenAIなど）を直接呼び出す際に、ブラウザでCORS (Cross-Origin Resource Sharing) ポリシーエラーが発生することがあります。この問題を開発環境で解決するために、Viteのプロキシ機能を利用できます。
+
+1.  **.env ファイルの編集**:
+    - プロジェクトのルートにある `.env.local` ファイルに、以下の変数を追加します。
+    - `VITE_PROXY_TARGET` には、接続したいAPIの **ベース部分（オリジン）** を設定します。
+    ```
+    # .env
+    VITE_PROXY_TARGET="https://YOUR_API_BASE_URL.com"
+    
+    # 例 (Azure OpenAI):
+    # VITE_PROXY_TARGET="https://example-aoai.openai.azure.com"
+    ```
+    - **重要**: `.env.local` ファイルを変更した後は、Vite開発サーバーを再起動してください。
+
+2.  **UIでのベースURL設定**:
+    - 設定モーダルの「OpenAI API Base URL」に、完全なURLの代わりに `/proxy` から始まるパスを入力します。
+    - 元のURL: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID`
+    - UIに入力するURL: `/proxy/openai/deployments/YOUR_DEPLOYMENT_ID`
+
+これにより、リクエストはViteの開発サーバーを経由して転送され、CORSエラーを回避できます。
 
 ## アーキテクチャと処理フロー
 

@@ -41,8 +41,8 @@ export class OpenAIService implements LLMService {
         let defaultQuery: Record<string, any> | undefined = undefined;
         let resolvedModel = model || "gpt-4.1-nano";
 
-        // Check if the baseURL is a full Azure-like endpoint URL for chat completions
-        if (resolvedBaseURL.includes('/openai/deployments/') && (resolvedBaseURL.endsWith('/chat/completions') || resolvedBaseURL.includes('/chat/completions?'))) {
+        // Check if the baseURL is a full, absolute Azure-like endpoint URL for chat completions
+        if (resolvedBaseURL.startsWith('http') && resolvedBaseURL.includes('/openai/deployments/')) {
             try {
                 const url = new URL(resolvedBaseURL);
                 const apiVersion = url.searchParams.get('api-version');

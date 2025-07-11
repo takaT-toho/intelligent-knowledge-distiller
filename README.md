@@ -35,7 +35,7 @@ When you select `OPENAI` as the provider, the following fields become available:
 
 - **OpenAI API Key**:
   - Enter your API key.
-  - The key entered here will take precedence over the key set in your environment variables (`.env` file).
+  - The key entered here will take precedence over the key set in your environment variables (`.env.local` file).
   - If left blank, the application will use the `OPENAI_API_KEY` from your environment variables.
 
 - **OpenAI API Base URL**:
@@ -48,6 +48,29 @@ When you select `OPENAI` as the provider, the following fields become available:
   - Specify the model name.
   - **For Azure OpenAI (AOAI)**: Enter your **Deployment Name** here (e.g., `gpt-4.1-nano`).
   - If left blank, or if the model cannot be automatically extracted from the URL, a default model will be used.
+
+### Troubleshooting: CORS Errors
+
+When calling external APIs like Azure OpenAI directly from the browser, you may encounter CORS (Cross-Origin Resource Sharing) policy errors. To resolve this in a development environment, you can use Vite's built-in proxy feature.
+
+1.  **Edit your `.env.local` file**:
+    - In the project root, add the following variable to your `.env.local` file.
+    - Set `VITE_PROXY_TARGET` to the **base origin** of the API you want to connect to.
+    ```
+    # .env
+    VITE_PROXY_TARGET="https://YOUR_API_BASE_URL.com"
+    
+    # Example (Azure OpenAI):
+    # VITE_PROXY_TARGET="https://example-aoai.openai.azure.com"
+    ```
+    - **Important**: Restart the Vite development server after changing the `.env.local` file.
+
+2.  **Set the Base URL in the UI**:
+    - In the settings modal, for the "OpenAI API Base URL", enter the path starting with `/proxy` instead of the full URL.
+    - Original URL: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID`
+    - URL to enter in UI: `/proxy/openai/deployments/YOUR_DEPLOYMENT_ID`
+
+This will route the request through the Vite dev server, bypassing the browser's CORS restrictions.
 
 ## Architecture and Processing Flow
 
