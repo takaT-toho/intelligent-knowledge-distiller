@@ -16,7 +16,38 @@
         - **シンプルモード**: 事前定義されたプロンプトを使用して処理します。
         - **ダイナミックモード**: 指定されたドメインに基づいてプロンプトを最適化し、より高品質な結果を目指します。
 - **多言語対応**: ユーザーインターフェースは日本語と英語の両方で利用可能です。
-- **カスタムOpenAIエンドポイント**: OpenAI APIのカスタムベースURLを指定でき、様々なプロキシサービスやローカルLLMプロバイダーとの互換性を確保します。
+- **柔軟なエンドポイント設定**: OpenAIおよびAzure OpenAI (AOAI) などの互換APIに対応するため、APIキー、ベースURL、モデル名（デプロイメント名）をUIから柔軟に設定できます。
+
+## 設定
+
+右上の歯車アイコンをクリックすると、設定モーダルが開きます。
+
+### AIモデルプロバイダー
+
+使用するLLMプロバイダーを選択します。
+
+- **GEMINI**: GoogleのGeminiモデルを使用します。APIキーは `.env` ファイルで設定する必要があります。
+- **OPENAI**: OpenAIのモデル、または互換API（Azure OpenAIなど）を使用します。
+
+### OpenAI / Azure OpenAI (AOAI) の設定
+
+プロバイダーとして `OPENAI` を選択すると、以下の項目が設定可能になります。
+
+- **OpenAI API Key**:
+  - APIキーを入力します。
+  - ここで入力したキーは、環境変数（`.env` ファイル）に設定されたキーよりも優先されます。
+  - 空欄の場合は、環境変数に設定された `OPENAI_API_KEY` が使用されます。
+
+- **OpenAI API Base URL**:
+  - APIのエンドポイントURLを指定します。
+  - **Azure OpenAI (AOAI) を使用する場合**: 以下のような、デプロイメントIDを含む完全なURLから、末尾の `/chat/completions` を **除いた** 部分を入力します。
+    - 例: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID`
+    - 元のURL: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID/chat/completions?api-version=2024-02-01`
+
+- **OpenAI Model (任意)**:
+  - モデル名を指定します。
+  - **Azure OpenAI (AOAI) を使用する場合**: ここに **デプロイメント名** を入力します。（例: `gpt-4.1-nano`）
+  - 空欄の場合、またはURLからモデル名を自動抽出できない場合は、デフォルトのモデルが使用されます。
 
 ## アーキテクチャと処理フロー
 
@@ -65,11 +96,15 @@
     ```bash
     npm install
     ```
-3.  ルートディレクトリに `.env` ファイルを作成します（`.env.example` があればコピーし、なければ新規作成します）。そして、APIキーを設定します:
+3.  ルートディレクトリに `.env.local` ファイルを作成します（`.env.example` があればコピーし、なければ新規作成します）。そして、必要に応じてAPIキーを設定します。
     ```
+    # Geminiを使用する場合に必要
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+
+    # OpenAIを使用する場合、UIで設定しない場合はここに設定
     OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
     ```
+    **注**: OpenAIのAPIキーは、UIの設定画面から直接入力することも可能です。UIで入力したキーは、この `.env.local` ファイルの設定よりも優先されます。
 4.  開発サーバーを実行します:
     ```bash
     npm run dev

@@ -26,12 +26,12 @@ export interface LLMService {
 }
 
 export class LLMServiceFactory {
-  static getService(provider: LLMProvider, config?: { baseURL?: string}): LLMService {
+  static getService(provider: LLMProvider, config?: { apiKey?: string, baseURL?: string, model?: string }): LLMService {
     switch (provider) {
       case LLMProvider.GEMINI:
         return new GeminiService();
       case LLMProvider.OPENAI:
-        return new OpenAIService(config?.baseURL);
+        return new OpenAIService(config?.apiKey, config?.baseURL, config?.model);
       default:
         throw new Error(`Provider ${provider} not supported`);
     }

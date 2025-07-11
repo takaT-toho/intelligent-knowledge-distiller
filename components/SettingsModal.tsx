@@ -10,8 +10,12 @@ interface SettingsModalProps {
     onClose: () => void;
     provider: LLMProvider;
     setProvider: (provider: LLMProvider) => void;
+    openaiApiKey: string;
+    setOpenaiApiKey: (key: string) => void;
     openaiBaseUrl: string;
     setOpenaiBaseUrl: (url: string) => void;
+    openaiModel: string;
+    setOpenaiModel: (model: string) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
@@ -19,8 +23,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     onClose, 
     provider, 
     setProvider, 
+    openaiApiKey,
+    setOpenaiApiKey,
     openaiBaseUrl, 
-    setOpenaiBaseUrl 
+    setOpenaiBaseUrl,
+    openaiModel,
+    setOpenaiModel
 }) => {
     if (!isOpen) return null;
 
@@ -50,17 +58,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                     
                     {provider === LLMProvider.OPENAI && (
-                        <div>
-                            <label htmlFor="openai-base-url" className="block text-sm font-medium text-gray-300 mb-2">
-                                OpenAI API Base URL (互換APIの場合)
-                            </label>
-                            <Input
-                                id="openai-base-url"
-                                value={openaiBaseUrl}
-                                onChange={(e) => setOpenaiBaseUrl(e.target.value)}
-                                placeholder="https://api.openai.com/v1"
-                            />
-                            <p className="text-xs text-gray-500 mt-2">OpenAI互換APIを使用する場合はベースURLを入力してください。</p>
+                        <div className="space-y-4">
+                            <div>
+                                <label htmlFor="openai-api-key" className="block text-sm font-medium text-gray-300 mb-2">
+                                    OpenAI API Key
+                                </label>
+                                <Input
+                                    id="openai-api-key"
+                                    type="password"
+                                    value={openaiApiKey}
+                                    onChange={(e) => setOpenaiApiKey(e.target.value)}
+                                    placeholder="sk-..."
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="openai-base-url" className="block text-sm font-medium text-gray-300 mb-2">
+                                    OpenAI API Base URL (互換APIの場合)
+                                </label>
+                                <Input
+                                    id="openai-base-url"
+                                    value={openaiBaseUrl}
+                                    onChange={(e) => setOpenaiBaseUrl(e.target.value)}
+                                    placeholder="https://api.openai.com/v1"
+                                />
+                                <p className="text-xs text-gray-500 mt-2">AOAI等、OpenAI互換APIを使用する場合はベースURLを入力してください。</p>
+                            </div>
+                            <div>
+                                <label htmlFor="openai-model" className="block text-sm font-medium text-gray-300 mb-2">
+                                    OpenAI Model (任意)
+                                </label>
+                                <Input
+                                    id="openai-model"
+                                    value={openaiModel}
+                                    onChange={(e) => setOpenaiModel(e.target.value)}
+                                    placeholder="gpt-4.1-nano (or your deployment name)"
+                                />
+                                <p className="text-xs text-gray-500 mt-2">モデル名を指定します。AOAIの場合はデプロイ名になります。</p>
+                            </div>
                         </div>
                     )}
                 </div>

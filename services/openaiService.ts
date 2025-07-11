@@ -33,13 +33,52 @@ const parseMarkdownResponse = (text: string): string => {
 
 export class OpenAIService implements LLMService {
     private client: OpenAI;
+    private model: string;
     
-    constructor(baseURL?: string) {
+    constructor(apiKey?: string, baseURL?: string, model?: string) {
+        const resolvedApiKey = apiKey || process.env.OPENAI_API_KEY || "";
+        let resolvedBaseURL = baseURL || "https://api.openai.com/v1";
+        let defaultQuery: Record<string, any> | undefined = undefined;
+        let resolvedModel = model || "gpt-4.1-nano";
+
+        // Check if the baseURL is a full Azure-like endpoint URL for chat completions
+        if (resolvedBaseURL.includes('/openai/deployments/') && (resolvedBaseURL.endsWith('/chat/completions') || resolvedBaseURL.includes('/chat/completions?'))) {
+            try {
+                const url = new URL(resolvedBaseURL);
+                const apiVersion = url.searchParams.get('api-version');
+                if (apiVersion) {
+                    defaultQuery = { 'api-version': apiVersion };
+                    url.searchParams.delete('api-version');
+                }
+
+                // The baseURL for the client should not include /chat/completions
+                if (url.pathname.endsWith('/chat/completions')) {
+                    url.pathname = url.pathname.substring(0, url.pathname.lastIndexOf('/chat/completions'));
+                }
+                resolvedBaseURL = url.toString();
+                
+                // Extract deployment name to use as model
+                const pathParts = url.pathname.split('/');
+                const deploymentIndex = pathParts.indexOf('deployments');
+                if (deploymentIndex > -1 && pathParts.length > deploymentIndex + 1) {
+                    resolvedModel = pathParts[deploymentIndex + 1];
+                }
+            } catch (error) {
+                console.error("Error parsing Azure-like URL. Falling back to default behavior.", error);
+                // Reset to defaults if URL parsing fails
+                resolvedBaseURL = baseURL || "https://api.openai.com/v1";
+                defaultQuery = undefined;
+                resolvedModel = model || "gpt-4.1-nano";
+            }
+        }
+
         this.client = new OpenAI({ 
-            apiKey: process.env.OPENAI_API_KEY || "",
+            apiKey: resolvedApiKey,
             dangerouslyAllowBrowser: true,
-            baseURL: baseURL || "https://api.openai.com/v1"
+            baseURL: resolvedBaseURL,
+            defaultQuery: defaultQuery
         });
+        this.model = resolvedModel;
     }
 
     private async generateContent(prompt: string, isJson: boolean, systemPrompt?: string): Promise<string> {
@@ -50,7 +89,7 @@ export class OpenAIService implements LLMService {
         messages.push({ role: "user", content: prompt });
 
         const response = await this.client.chat.completions.create({
-            model: "gpt-4.1-nano",
+            model: this.model,
             messages: messages,
             response_format: isJson ? { type: "json_object" } : { type: "text" },
         });

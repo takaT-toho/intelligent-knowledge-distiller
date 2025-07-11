@@ -34,7 +34,9 @@ const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
     const [progress, setProgress] = useState({ current: 0, total: 0, task: '' });
+    const [openaiApiKey, setOpenaiApiKey] = useState<string>(process.env.OPENAI_API_KEY || "");
     const [openaiBaseUrl, setOpenaiBaseUrl] = useState<string>("https://api.openai.com/v1");
+    const [openaiModel, setOpenaiModel] = useState<string>("");
 
     useEffect(() => {
         setRawData(t('sampleText'));
@@ -47,8 +49,9 @@ const App: React.FC = () => {
             return;
         }
         
-        if (llmProvider === LLMProvider.OPENAI && !process.env.OPENAI_API_KEY) {
-            setError("OPENAI_API_KEY environment variable not set. Please configure it in .env.local to use the OpenAI API.");
+        const finalOpenAiApiKey = openaiApiKey || process.env.OPENAI_API_KEY;
+        if (llmProvider === LLMProvider.OPENAI && !finalOpenAiApiKey) {
+            setError("OpenAI API Key not set. Please configure it in the settings or in your environment variables.");
             setProcessingState(ProcessingState.ERROR);
             return;
         }
@@ -66,7 +69,9 @@ const App: React.FC = () => {
 
         try {
             const llmService = LLMServiceFactory.getService(llmProvider, {
-                baseURL: llmProvider === LLMProvider.OPENAI ? openaiBaseUrl : undefined
+                apiKey: llmProvider === LLMProvider.OPENAI ? finalOpenAiApiKey : undefined,
+                baseURL: llmProvider === LLMProvider.OPENAI ? openaiBaseUrl : undefined,
+                model: llmProvider === LLMProvider.OPENAI ? openaiModel : undefined
             });
 
             const getFinalPrompt = async (basePrompt: string) => {
@@ -187,7 +192,7 @@ const App: React.FC = () => {
             setError(e instanceof Error ? e.message : 'An unknown error occurred.');
             setProcessingState(ProcessingState.ERROR);
         }
-    }, [rawData, separator, llmProvider, openaiBaseUrl, t, domain, processingMode]);
+    }, [rawData, separator, llmProvider, openaiApiKey, openaiBaseUrl, openaiModel, t, domain, processingMode]);
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-200 font-sans">
@@ -224,8 +229,12 @@ const App: React.FC = () => {
                 onClose={() => setIsSettingsOpen(false)}
                 provider={llmProvider}
                 setProvider={setLlmProvider}
+                openaiApiKey={openaiApiKey}
+                setOpenaiApiKey={setOpenaiApiKey}
                 openaiBaseUrl={openaiBaseUrl}
                 setOpenaiBaseUrl={setOpenaiBaseUrl}
+                openaiModel={openaiModel}
+                setOpenaiModel={setOpenaiModel}
             />
             {error && <Toast message={error} onClose={() => setError(null)} />}
         </div>

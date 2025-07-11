@@ -16,7 +16,38 @@ It transforms unstructured text data, such as support tickets, into a structured
         - **Simple Mode**: Uses predefined prompts for processing.
         - **Dynamic Mode**: Optimizes prompts based on the specified domain for potentially higher quality results.
 - **Multi-language Support**: The user interface is available in both English and Japanese.
-- **Custom OpenAI Endpoint**: Allows users to specify a custom base URL for the OpenAI API, enabling compatibility with various proxy services or local LLM providers.
+- **Flexible Endpoint Configuration**: Supports compatible APIs like Azure OpenAI (AOAI) by allowing flexible configuration of the API Key, Base URL, and Model Name (Deployment Name) directly from the UI.
+
+## Configuration
+
+Click the gear icon in the top-right corner to open the settings modal.
+
+### AI Model Provider
+
+Select the LLM provider you want to use.
+
+- **GEMINI**: Uses Google's Gemini models. The API key must be set in the `.env` file.
+- **OPENAI**: Uses OpenAI's models or a compatible API (like Azure OpenAI).
+
+### OpenAI / Azure OpenAI (AOAI) Settings
+
+When you select `OPENAI` as the provider, the following fields become available:
+
+- **OpenAI API Key**:
+  - Enter your API key.
+  - The key entered here will take precedence over the key set in your environment variables (`.env` file).
+  - If left blank, the application will use the `OPENAI_API_KEY` from your environment variables.
+
+- **OpenAI API Base URL**:
+  - Specify the API endpoint URL.
+  - **For Azure OpenAI (AOAI)**: Enter the URL for your deployment, **excluding** the trailing `/chat/completions`.
+    - Example: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID`
+    - From the original URL: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID/chat/completions?api-version=2024-02-01`
+
+- **OpenAI Model (Optional)**:
+  - Specify the model name.
+  - **For Azure OpenAI (AOAI)**: Enter your **Deployment Name** here (e.g., `gpt-4.1-nano`).
+  - If left blank, or if the model cannot be automatically extracted from the URL, a default model will be used.
 
 ## Architecture and Processing Flow
 
@@ -65,11 +96,15 @@ This dynamic logic is orchestrated within the `handleProcess` function in `App.t
     ```bash
     npm install
     ```
-3.  Create a `.env` file in the root directory by copying `.env.example` (if it exists) or creating it from scratch. Then, set your API keys:
+3.  Create a `.env.local` file in the root directory by copying `.env.example` (if it exists) or creating it from scratch. Then, set your API keys as needed.
     ```
+    # Required if using Gemini
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+
+    # Used for OpenAI if not set in the UI
     OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
     ```
+    **Note**: The OpenAI API key can also be entered directly in the settings UI. The key provided in the UI will override the one in the `.env.local` file.
 4.  Run the development server:
     ```bash
     npm run dev
