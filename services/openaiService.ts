@@ -65,7 +65,12 @@ export class OpenAIService implements LLMService {
                 const url = new URL(originalURL);
                 const apiVersion = url.searchParams.get('api-version');
                 if (apiVersion) {
-                    defaultQuery = { 'api-version': apiVersion };
+                    // Manually append api-version to the proxied URL instead of using defaultQuery
+                    if (resolvedBaseURL.includes('/proxy/')) {
+                        resolvedBaseURL += `?api-version=${apiVersion}`;
+                    } else {
+                        defaultQuery = { 'api-version': apiVersion };
+                    }
                 }
                 
                 const pathParts = url.pathname.split('/');
@@ -89,7 +94,8 @@ export class OpenAIService implements LLMService {
             apiKey: resolvedApiKey,
             dangerouslyAllowBrowser: true,
             baseURL: resolvedBaseURL,
-            defaultQuery: defaultQuery
+            // defaultQuery is not used when manually appending api-version for proxy
+            defaultQuery: resolvedBaseURL.includes('/proxy/') ? undefined : defaultQuery
         });
         this.model = resolvedModel;
     }
