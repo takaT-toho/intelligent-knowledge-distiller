@@ -110,7 +110,7 @@ const App: React.FC = () => {
             
             const newCategorizedData = new Map<string, string[]>();
             ticketCategories.forEach((cats, i) => {
-                if (cats && cats.length > 0) {
+                if (cats && cats.length > 0 && cats[0]?.category) {
                     const categoryName = cats[0].category; // Use first category for simplicity
                      if (!newCategorizedData.has(categoryName)) {
                         newCategorizedData.set(categoryName, []);
@@ -150,7 +150,7 @@ const App: React.FC = () => {
                         
                         const subCategorizedData = new Map<string, string[]>();
                         subTicketCategories.forEach((subCats, ticketIndex) => {
-                            if (subCats && subCats.length > 0) {
+                            if (subCats && subCats.length > 0 && subCats[0]?.subcategory) {
                                 const subCategoryName = subCats[0].subcategory;
                                 if (!subCategorizedData.has(subCategoryName)) {
                                     subCategorizedData.set(subCategoryName, []);
