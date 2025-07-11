@@ -1,0 +1,70 @@
+{
+  "appTitle": "Intelligent Knowledge Distiller",
+  "inputSection": {
+    "title": "1. Input Data",
+    "domainLabel": "Domain",
+    "domainPlaceholder": "e.g., Supply Chain, IT Support, Customer Service",
+    "processingModeLabel": "Processing Mode",
+    "simpleMode": "Simple Mode",
+    "dynamicMode": "Dynamic Mode",
+    "pasteLabel": "Paste your unstructured data (e.g., tickets, emails)",
+    "pastePlaceholder": "Paste your data here...",
+    "separatorLabel": "Data record separator",
+    "processButton": "Distill Knowledge",
+    "processingButton": "Processing..."
+  },
+  "orchestratorSection": {
+    "title": "2. Agent Orchestration",
+    "discoverCategories": "Discover Categories",
+    "categorizeData": "Categorize Data",
+    "synthesizeKnowledge": "Synthesize Knowledge",
+    "discoveredCategories": "Discovered Categories:"
+  },
+  "outputSection": {
+    "title": "3. Distilled Knowledge",
+    "idle": "Output will be displayed here after processing.",
+    "error": "An error occurred. Please check the error message and try again.",
+    "generating": "Generating knowledge articles...",
+    "noArticles": "Processing complete, but no knowledge articles were generated. This might happen if no categories were found or data could not be categorized.",
+    "downloadArticle": "Download article"
+  },
+  "progress": {
+    "discovering": "Discovering categories...",
+    "categorizing": "Categorizing tickets...",
+    "synthesizing": "Synthesizing knowledge...",
+    "processing": "Processing: {{categoryName}}",
+    "discoveringSub": "Discovering subcategories for: {{categoryName}}",
+    "categorizingSub": "Categorizing into subcategories for: {{categoryName}}",
+    "synthesizingSub": "Synthesizing: {{categoryName}} > {{subCategoryName}}",
+    "categoriesDiscovered": "Categories discovered!",
+    "categorizationComplete": "Categorization complete!",
+    "synthesisComplete": "Knowledge synthesis complete!"
+  },
+  "sampleText": "Title: Cannot access shared drive\nDescription: I'm trying to access the Q3-Financials shared drive but I keep getting an access denied error. My username is jdoe. I had access yesterday.\n\n--- TICKET BREAK ---\n\nTitle: Login issue on warehouse terminal\nDescription: The terminal at loading bay 4 is not letting me log in. It says 'Invalid Credentials'. I've tried resetting my password but it didn't help. My colleague was able to log in fine.\n\n--- TICKET BREAK ---\n\nTitle: Need access to Marketing folder\nDescription: Hi team, can you please grant me read/write access to the new '2025_Campaign_Assets' folder in the marketing drive? My manager, Jane Smith, has approved this.\n\n--- TICKET BREAK ---\n\nTitle: Password expired\nDescription: My password expired and the reset link isn't working. It just goes to a blank page. I need to get into the system ASAP. User ID: mchen",
+  "prompts": {
+    "system": {
+      "main": "You are an AI assistant that follows instructions precisely. Adhere strictly to the following directives:\n1. **Response Format:** Output only the requested information in the specified format (e.g., JSON, Markdown). Do not include any conversational pleasantries, preambles, or postscripts.\n2. **Data Adherence:** Generate responses based only on the provided data. Do not use external knowledge or make assumptions.\n3. **Conciseness:** Always be concise and to the point."
+    },
+    "categoryDiscovery": {
+      "main": "You are analyzing ticket data from a {{domain}} management system. Your task is to discover knowledge categories based STRICTLY on the provided sample tickets.\n\n# Sample Tickets\n{{tickets}}\n\n# Task\nCreate a taxonomy of knowledge categories based ONLY on these sample tickets.\n\nFor each category:\n1. Provide a clear, concise name to capture the essence of the issue type (5 words or less).\n2. Write a brief description of what this category encompasses (50 words or less).\n3. List identifying patterns or keywords (maximum 15 per category).\n\n# Important Guidelines\n1. Focus ONLY on categories that are ACTUALLY REPRESENTED in the sample tickets.\n2. Categories should be based on the nature of the problem, not just surface details.\n3. Categories should be distinct from each other with minimal overlap.\n4. The number of categories should reflect the diversity in the sample. DO NOT create more categories than justified by the samples.\n5. Be extremely concise with category names and description, and use short keywords for identifying patterns.\n6. DO NOT create categories for general organizational content that isn’t an actual problem.\n7. DO NOT use your general knowledge about {{domain}} systems to invent categories, rely ONLY on what's in the data.\n\n# Output Format\nReturn a JSON structure:\n\n{\n  \"categories\": [\n    {\n      \"name\": \"Short Category Name\",\n      \"description\": \"Brief description\",\n      \"identifying_patterns\": [\"pattern1\", \"pattern2\", \"pattern3\"]\n    }\n  ]\n}\nEnsure your JSON is properly formatted and valid. Be extremely concise with all text to minimize token usage."
+    },
+    "ticketCategorization": {
+      "main": "You are categorizing a {{domain}} ticket into predefined knowledge categories.\n\n# Ticket Information\nTitle: {{title}}\nDescription: {{description}}\n\n# Available Categories\n{{categories}}\n\n# Task\nAssign this ticket to the most appropriate category from the list. \nIf the ticket clearly fits multiple categories, you may assign it to up to 2 categories.\n\n# Output Format\nReturn a JSON structure:\n\n{\n  \"assignments\": [\n    {\n      \"category\": \"Category Name\",\n      \"reasoning\": \"Brief explanation of why this category fits\"\n    }\n  ]\n}\n\nIf no categories are clearly applicable, return an empty assignments array."
+    },
+    "knowledgeSynthesis": {
+      "main": "You are synthesizing knowledge from {{domain}} tickets to create a concise, factual knowledge base article specifically for users who create tickets in this system.\n\n# Category Information\nName: {{categoryName}}\nDescription: {{categoryDescription}}\n\n# Tickets in this Category\n{{tickets}}\n\n# Task\nCreate a CONCISE knowledge article that contains ONLY information directly supported by the ticket data.\n\n# Important Requirements\n1. Use ONLY information explicitly mentioned in the ticket data.\n2. DO NOT expand acronyms unless they are expanded in the tickets themselves.\n3. DO NOT make up definitions for systems if not provided in the data.\n4. DO NOT invent processes or best practices not mentioned in tickets.\n5. Keep the article SHORT and FOCUSED - aim for 50% less content than you might typically write.\n6. Write in a direct style addressing ticket creators.\n\n# Focus on\n1. Common issues seen in these tickets (briefly).\n2. Actual solutions that worked (from ticket resolutions).\n3. Minimal, specific advice based only on ticket content.\n\n# Output Format\nYour response should be a concise markdown document with:\n1.  Title: A brief descriptive title\n2.  Common Issues: 2-3 bullet points of the main issues (be brief)\n3. Tips for Resolution: Specific advice based ONLY on what worked in the tickets\n4.  Resources: Only mention systems/links that appear in the tickets\n\nTotal length should be no more than 400-500 words maximum."
+    },
+    "categoryMerge": {
+      "main": "You are analyzing multiple sets of knowledge categories from a {{domain}} management system. Your task is to merge these category sets into one comprehensive, non-redundant taxonomy.\n\n# Category Sets\n```\n{{categorySetsJson}}\n```\n\n# Task\nMerge these category sets into a single comprehensive taxonomy. Each category set was derived from different batches of ticket data, so they may contain:\n1.  Identical categories that appear in multiple sets\n2.  Similar categories with slight variations in name, description, or identifying patterns\n3.  Unique categories that only appear in one set\n\nFor the merged taxonomy:\n1.  Consolidate identical or highly similar categories\n2. For similar categories, combine the best elements of each description and merge identifying patterns\n3.  Preserve unique categories that represent distinct knowledge areas\n4. Keep descriptions brief (50 words maximum)\n5.  Limit to maximum 15 identifying patterns per category\n\n# Important Guidelines\n1.  Focus on semantic similarity, not just text matching\n2. When merging similar categories, choose the clearest name and most comprehensive description\n3.  Combine identifying patterns from similar categories but avoid redundancy\n4.  Ensure the final taxonomy is comprehensive with minimal redundancy\n5. Be extremely concise with category names and descriptions\n\n# Output Format\nReturn a JSON structure with the merged categories:\n{\n  \"categories\": [\n    {\n      \"name\": \"Short Category Name\",\n      \"description\": \"Brief description\",\n      \"identifying_patterns\": [\"pattern1\", \"pattern2\", \"pattern3\"]\n    }\n  ],\n  \"merge_summary\": \"Brief description of how the merging was done\"\n}\nEnsure your JSON is properly formatted and valid. Be extremely concise with all text to minimize token usage."
+    },
+    "subcategoryDiscovery": {
+      "main": "You are analyzing a set of tickets from a {{domain}} management system that have already been categorized into a main category. Your task is to discover SUBCATEGORIES within this main category.\n\n# Main Category Information\nName: {{parentCategoryName}}\nDescription: {{parentCategoryDescription}}\n\n# Sample Tickets from this Category\n```\n{{sampleTickets}}\n```\n\n# Task\nCreate a taxonomy of SUBCATEGORIES for these tickets. These tickets all belong to the same main category, but need to be further organized into more specific subcategories.\n\nFor each subcategory:\n1.  Provide a clear, concise name to capture the specific issue type (5 words or less)\n2.  Write a brief description of what this subcategory encompasses (50 words or less)\n3. List identifying patterns or keywords (maximum 10 per subcategory)\n\n# Important Guidelines\n1.  Focus ONLY on subcategories that are ACTUALLY REPRESENTED in the sample tickets\n2. The subcategories should be distinct from each other with minimal overlap\n3. The number of subcategories should reflect the diversity in the sample - DO NOT create more subcategories than justified by the samples\n4. The subcategory names should clearly relate to the parent category but be more specific\n5. Be extremely concise with subcategory names and descriptions\n6. DO NOT use your general knowledge to invent subcategories - rely ONLY on what's in the data\n\n# Output Format\nReturn a JSON structure:\n{\n  \"subcategories\": [\n    {\n      \"name\": \"Short Subcategory Name\",\n      \"description\": \"Brief description\",\n      \"identifying_patterns\": [\"pattern1\", \"pattern2\", \"pattern3\"],\n      \"parent_category\": \"{{parentCategoryName}}\"\n    }\n  ]\n}\nEnsure your JSON is properly formatted and valid. Be extremely concise with all text to minimize token usage."
+    },
+    "subcategoryCategorization": {
+      "main": "You are categorizing a ticket into predefined subcategories within a main category.\n\n# Ticket Information\nTitle: {{title}}\nDescription: {{description}}\n\n# Main Category\n{{parentCategoryName}}: {{parentCategoryDescription}}\n\n# Available Subcategories\n{{subcategories}}\n\n# Task\nAssign this ticket to the most appropriate subcategory from the list.\n\n# Output Format\nReturn a JSON structure:\n{\n  \"assignments\": [\n    {\n      \"subcategory\": \"Subcategory Name\",\n      \"reasoning\": \"Brief explanation of why this subcategory fits\"\n    }\n  ]\n}\nIf no subcategories are clearly applicable, return an empty assignments array."
+    },
+    "knowledgeMerge": {
+      "main": "You are merging multiple knowledge articles on the same topic into a single comprehensive article.\n\n# Category Information\nName: {{categoryName}}\nDescription: {{categoryDescription}}\n\n# Knowledge Articles to Merge\n{{articlesToMerge}}\n\n# Task\nCreate a single, coherent knowledge article that combines insights from all the provided articles.\n\n# Important Requirements\n1.  ORGANIZE information logically into sections (Common Issues, Tips for Resolution, Resources)\n2.  REMOVE redundancy - multiple articles may cover the same points\n3.  PRIORITIZE information that appears in multiple articles\n4.  INCLUDE unique insights from individual articles if they add value\n5.  MAINTAIN conciseness - focus on the most valuable information\n6. USE the same level of specificity as the input articles\n7. DO NOT introduce new information not present in the source articles\n8. DO NOT expand acronyms unless they were expanded in the source articles\n\n# Output Format\nYour response should be a single markdown document with:\n1.  Title: A clear descriptive title related to the category\n2.  Common Issues: Consolidated list of key issues (brief bullet points)\n3. Tips for Resolution: Specific advice based on the source articles\n4.  Resources: Systems/links that appear in the source articles\n\nTotal length should be no more than 400-500 words maximum."
+    }
+  }
+}
