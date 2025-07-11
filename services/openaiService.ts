@@ -36,18 +36,19 @@ export class OpenAIService implements LLMService {
     private model: string;
     
     constructor(apiKey?: string, baseURL?: string, model?: string) {
-        console.log("OpenAIService constructor called with:", { apiKey, baseURL, model });
-
         const resolvedApiKey = apiKey || process.env.OPENAI_API_KEY || "";
         let resolvedBaseURL = baseURL || "https://api.openai.com/v1";
         let defaultQuery: Record<string, any> | undefined = undefined;
         let resolvedModel = model || "gpt-4.1-nano";
 
-        console.log("Initial resolved values:", { resolvedApiKey, resolvedBaseURL, resolvedModel });
+        // If baseURL is a relative path (for proxy), make it absolute by prepending the current origin.
+        // This is necessary as the OpenAI client library seems to require an absolute URL.
+        if (resolvedBaseURL.startsWith('/')) {
+            resolvedBaseURL = `${window.location.origin}${resolvedBaseURL}`;
+        }
 
         // Check if the baseURL is a full, absolute Azure-like endpoint URL for chat completions
         if (resolvedBaseURL.startsWith('http') && resolvedBaseURL.includes('/openai/deployments/')) {
-            console.log("Attempting to parse absolute Azure-like URL:", resolvedBaseURL);
             try {
                 const url = new URL(resolvedBaseURL);
                 const apiVersion = url.searchParams.get('api-version');
@@ -75,25 +76,15 @@ export class OpenAIService implements LLMService {
                 defaultQuery = undefined;
                 resolvedModel = model || "gpt-4.1-nano";
             }
-        } else {
-            console.log("URL is not an absolute Azure-like URL, skipping parsing logic.");
         }
 
-        console.log("Final values for OpenAI client:", { resolvedApiKey, resolvedBaseURL, resolvedModel, defaultQuery });
-
-        try {
-            this.client = new OpenAI({ 
-                apiKey: resolvedApiKey,
-                dangerouslyAllowBrowser: true,
+        this.client = new OpenAI({ 
+            apiKey: resolvedApiKey,
+            dangerouslyAllowBrowser: true,
             baseURL: resolvedBaseURL,
             defaultQuery: defaultQuery
-            });
-            this.model = resolvedModel;
-            console.log("OpenAI client created successfully.");
-        } catch (error) {
-            console.error("FATAL: Failed to create OpenAI client:", error);
-            throw error;
-        }
+        });
+        this.model = resolvedModel;
     }
 
     private async generateContent(prompt: string, isJson: boolean, systemPrompt?: string): Promise<string> {
