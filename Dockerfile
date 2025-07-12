@@ -1,36 +1,39 @@
-# syntax=docker/dockerfile:1
-
-# Build stage
+# Stage 1: Build the application using a "builder" stage
 FROM node:18-alpine AS build
 WORKDIR /app
+
 COPY package*.json ./
 RUN npm install
+
 COPY . .
 
-# --secret を使って渡されたAPIキーを .env ファイルに書き込む
-# この .env ファイルはViteのビルド時に読み込まれる
+# Securely mount the secret file and use it during the build.
 RUN --mount=type=secret,id=env_file,dst=.env \
     echo "Using .env from secret"
 
-# アプリケーションをビルド
+# Build the application
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine AS production
+# Stage 2: Create the final, lean production image
+FROM node:18-alpine
 WORKDIR /app
 
-# Nginxとgettextをインストール
-RUN apk add --no-cache nginx gettext
+# Set the environment to production
+# This ensures that server.js runs in production mode
+ENV NODE_ENV=production
 
-# ビルドステージから必要なファイルをコピー
-COPY --from=build /app/dist /usr/share/nginx/html
+# Copy production dependencies and package.json
+COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json .
+
+# Copy the enhanced server and the built application
 COPY --from=build /app/server.js .
+COPY --from=build /app/dist ./dist
 
-# Nginx設定テンプレートと起動スクリプトをコピー
-COPY nginx.conf.template /etc/nginx/templates/nginx.conf.template
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Expose the port the app runs on.
+# Cloud Run will automatically use this port if PORT env var is not set,
+# but it's good practice to declare it.
+EXPOSE 8080
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# The command to start the server
+CMD ["node", "server.js"]

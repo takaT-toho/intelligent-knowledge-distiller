@@ -1,96 +1,55 @@
 # Intelligent Knowledge Distiller
 
-This project is an implementation of the multi-agent knowledge base creation system proposed in the research paper: **"From Unstructured Communication to Intelligent RAG: Multi-Agent Automation for Supply Chain Knowledge Bases"** ([arXiv:2506.17484](https://arxiv.org/abs/2506.17484)).
+This project is an implementation of the multi-agent knowledge base construction system proposed in the research paper **"From Unstructured Communication to Intelligent RAG: Multi-Agent Automation for Supply Chain Knowledge Bases"** ([arXiv:2506.17484](https://arxiv.org/abs/2506.17484)).
 
-It transforms unstructured text data, such as support tickets, into a structured and synthesized knowledge base using Large Language Models (LLMs). This application provides a user interface to control the process, supporting both Gemini and OpenAI models.
+It transforms unstructured text data, such as support tickets, into a structured and summarized knowledge base using Large Language Models (LLMs). The application provides a user interface to control the process and supports both Gemini and OpenAI models.
 
 ## Features
 
-- **Automated Knowledge Base Creation**: Transforms raw text into categorized, synthesized knowledge articles.
-- **Dynamic Categorization**: Discovers categories and subcategories from the data automatically.
-- **Hierarchical Processing**: For categories with a large number of items, it performs a deeper analysis by creating and processing subcategories, preventing loss of detail.
-- **LLM Flexibility**: Supports both Google's Gemini and OpenAI's models.
-- **Customizable Processing**:
-    - **Domain Specification**: Users can specify the business domain (e.g., "Supply Chain") to tailor the AI's understanding.
-    - **Processing Modes**:
-        - **Simple Mode**: Uses predefined prompts for processing.
-        - **Dynamic Mode**: Optimizes prompts based on the specified domain for potentially higher quality results.
-- **Multi-language Support**: The user interface is available in both English and Japanese.
-- **Flexible Endpoint Configuration**: Supports compatible APIs like Azure OpenAI (AOAI) by allowing flexible configuration of the API Key, Base URL, and Model Name (Deployment Name) directly from the UI.
+-   **Automated Knowledge Base Construction**: Converts raw text into categorized and summarized knowledge articles.
+-   **Dynamic Categorization**: Automatically discovers categories and subcategories from the data.
+-   **Hierarchical Processing**: For categories with a large number of items, it creates subcategories for deeper analysis, preventing loss of detail.
+-   **LLM Flexibility**: Supports both Google's Gemini and OpenAI's models.
+-   **Customizable Processing**:
+    -   **Domain Specification**: Users can specify a business domain (e.g., "Supply Chain") to tailor the AI's understanding.
+    -   **Processing Modes**:
+        -   **Simple Mode**: Uses predefined prompts for processing.
+        -   **Dynamic Mode**: Optimizes prompts based on the specified domain to aim for higher quality results.
+-   **Multilingual Support**: The user interface is available in both Japanese and English.
+-   **Flexible Endpoint Configuration**: Allows flexible configuration of API key, base URL, and model name (deployment name) from the UI to support OpenAI and compatible APIs like Azure OpenAI (AOAI).
 
-## Configuration
+## Architecture Overview
 
-Click the gear icon in the top-right corner to open the settings modal.
+This application is structured as a simple, unified Node.js application.
+
+-   **Frontend**: A modern UI built with React, TypeScript, and Vite.
+-   **Backend**: A lightweight Node.js server (`server.js`) built with Express. This server has two key roles:
+    1.  **Web Server**: Serves the static files (HTML, CSS, JS) of the built React application.
+    2.  **API Proxy**: Securely relays API requests to prevent CORS (Cross-Origin Resource Sharing) errors that occur when browsers make direct requests to external APIs like Azure OpenAI.
+
+This integrated setup ensures both local development and production deployment are simple and robust.
+
+## Settings
+
+Click the gear icon (⚙️) in the upper right corner to open the settings modal.
 
 ### AI Model Provider
 
-Select the LLM provider you want to use.
+Select the LLM provider to use.
 
-- **GEMINI**: Uses Google's Gemini models. The API key must be set in the `.env` file.
-- **OPENAI**: Uses OpenAI's models or a compatible API (like Azure OpenAI).
+-   **GEMINI**: Uses Google's Gemini models. The API key must be set in your `.env` file.
+    -   **Changing Models**: The Gemini model is currently hardcoded. To change it, edit the `model` value in the `generateContent` method within `services/geminiService.ts`.
+-   **OPENAI**: Uses OpenAI's models or a compatible API (like Azure OpenAI).
 
 ### OpenAI / Azure OpenAI (AOAI) Settings
 
-When you select `OPENAI` as the provider, the following fields become available:
+When `OPENAI` is selected, you can configure the following:
 
-- **OpenAI API Key**:
-  - Enter your API key.
-  - The key entered here will take precedence over the key set in your environment variables (`.env.local` file).
-  - If left blank, the application will use the `OPENAI_API_KEY` from your environment variables.
+-   **OpenAI API Key**: Enter your API key. This takes precedence over any key set in environment variables.
+-   **OpenAI API Base URL**: Specify the API endpoint URL. For Azure OpenAI, you can paste the full endpoint URL directly.
+-   **OpenAI Model (Optional)**: Specify the model name. For Azure OpenAI, this is your **deployment name**.
 
-- **OpenAI API Base URL**:
-  - Specify the API endpoint URL.
-  - **For Azure OpenAI (AOAI)**: You can paste the full endpoint URL directly. The application will automatically handle it.
-    - Example: `https://example-aoai.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_ID/chat/completions?api-version=2024-02-01`
-
-- **OpenAI Model (Optional)**:
-  - This field is generally not required when using an Azure Base URL, as the deployment name is automatically extracted from it.
-
-### CORS Handling
-
-This project includes a simple Node.js Express server (`server.js`) that acts as a proxy to handle CORS (Cross-Origin Resource Sharing) errors. When you run `npm run dev`, this proxy server starts automatically on port 3001 alongside the Vite development server.
-
-All external API requests for custom URLs (like Azure OpenAI) are routed through this local proxy, which then forwards them to the actual API endpoint. This approach completely avoids browser-based CORS issues without requiring any special configuration from the user.
-
-## Architecture and Processing Flow
-
-The system employs an "offline-first" approach to enhance Retrieval-Augmented Generation (RAG). It pre-builds a high-quality, condensed knowledge base through a pipeline of specialized AI agents, rather than performing complex processing at query time.
-
-### Agent Roles
-
-1.  **Category Discovery Agent**: Analyzes raw data to identify and create a taxonomy of knowledge categories.
-2.  **Ticket Categorization Agent**: Assigns each ticket to the most relevant category.
-3.  **Knowledge Synthesis Agent**: Aggregates all tickets within a category (or subcategory) and generates a concise, actionable knowledge article.
-
-### Hierarchical Processing for Large Categories
-
-A key feature is its ability to handle large categories. When the number of tickets in a category exceeds a threshold (`SUBCATEGORY_THRESHOLD`), the system dynamically switches to a more detailed, hierarchical processing flow:
-
-1.  **Subcategory Discovery**: A specialized agent re-analyzes the tickets within the large category to find more granular subcategories.
-2.  **Subcategory Categorization**: Tickets are then classified into these new subcategories.
-3.  **Synthesize per Subcategory**: Knowledge articles are generated for each subcategory, resulting in more focused and specific insights.
-
-This dynamic logic is orchestrated within the `handleProcess` function in `App.tsx`.
-
-## Tech Stack
-
-- **Frontend**: React, TypeScript, Vite
-- **Styling**: Tailwind CSS
-- **LLM Integration**: `@google/genai`, `openai`
-- **Internationalization**: `i18next`, `react-i18next`
-
-## Key Code Locations
-
-| Feature | Location | Description |
-| :--- | :--- | :--- |
-| **Core Prompts** | `constants.ts` | Contains all the prompt templates used by the AI agents. |
-| **Orchestration Logic** | `App.tsx` | The main `handleProcess` function controls the state and flow of the entire pipeline. |
-| **LLM Services** | `services/` | `llmService.ts` defines the interface, with `geminiService.ts` and `openaiService.ts` providing the concrete implementations. |
-| **Type Definitions** | `types.ts` | Defines the core data structures like `Category`, `KnowledgeArticle`, etc. |
-| **UI Components** | `components/` | Contains all React components for the user interface. |
-| **Localization** | `public/locales/` | Contains JSON files for English and Japanese translations. |
-
-## Run Locally
+## Local Development
 
 **Prerequisites:** Node.js
 
@@ -99,17 +58,22 @@ This dynamic logic is orchestrated within the `handleProcess` function in `App.t
     ```bash
     npm install
     ```
-3.  Create a `.env.local` file in the root directory by copying `.env.example` (if it exists) or creating it from scratch. Then, set your API keys as needed.
+3.  Create a `.env.local` file in the root directory and set your API keys.
     ```
-    # Required if using Gemini
+    # Required for Gemini
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 
-    # Used for OpenAI if not set in the UI
+    # Required for OpenAI if not set in the UI
     OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
     ```
-    **Note**: The OpenAI API key can also be entered directly in the settings UI. The key provided in the UI will override the one in the `.env.local` file.
+    **Note**: The OpenAI API key can also be entered directly in the UI settings, which will override the `.env.local` file.
 4.  Run the development server:
     ```bash
     npm run dev
     ```
-5.  Open your browser and navigate to the local URL provided (usually `http://localhost:5173`).
+    This command starts the Vite development server (providing hot-reloading) and the Node.js server for API proxying concurrently.
+5.  Open `http://localhost:5173` in your browser.
+
+## Deployment to Cloud Run
+
+See `docs/DEPLOY_TO_GCR.md` for details.
