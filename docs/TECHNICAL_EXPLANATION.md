@@ -9,10 +9,11 @@
 今回のデプロイプロセスでは、以下のことを行っています。
 
 1.  Reactアプリケーションをビルドして、静的なWebサイトのファイル群（`dist` ディレクトリ）を生成する。
-2.  これらのファイルを配信するための軽量なWebサーバー **Nginx** を用意する。
-3.  アプリケーションのファイル群とNginxをひとまとめにした **Dockerイメージ** という「パッケージ」を作成する。
-4.  このDockerイメージをGoogle Cloudの **Artifact Registry** という倉庫に保管する。
-5.  **Cloud Run** に「Artifact Registryにあるあのパッケージを使って、Webサイトを公開してください」とお願いする。
+2.  これらのファイルを配信するためのWebサーバー **Nginx** を用意する。
+3.  外部APIと通信する際のCORSエラーを回避するための **APIプロキシサーバー (Node.js)** を用意する。
+4.  アプリケーションのファイル群、Nginx、APIプロキシサーバーをひとまとめにした **Dockerイメージ** という「パッケージ」を作成する。
+5.  このDockerイメージをGoogle Cloudの **Artifact Registry** という倉庫に保管する。
+6.  **Cloud Run** に「Artifact Registryにあるあのパッケージを使って、Webサイトを公開してください」とお願いする。
 
 これにより、自分のPCで動かしていたアプリケーションが、Googleの堅牢なインフラ上で24時間365日、世界中に公開されるようになります。
 
@@ -39,11 +40,24 @@ RUN --mount=type=secret,id=env_file,dst=.env \
 RUN npm run build
 
 # --- ステージ2: 本番環境 ---
-FROM nginx:stable-alpine
+FROM node:18-alpine AS production
+WORKDIR /app
+
+# Nginxとgettextをインストール
+RUN apk add --no-cache nginx gettext
+
+# ビルドステージから必要なファイルをコピー
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json .
+COPY --from=build /app/server.js .
+
+# Nginx設定テンプレートと起動スクリプトをコピー
+COPY nginx.conf.template /etc/nginx/templates/nginx.conf.template
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 ```
 
 ### ステージ1: ビルド環境 (`AS build`)
@@ -61,16 +75,17 @@ CMD ["nginx", "-g", "daemon off;"]
 
 ### ステージ2: 本番環境 (Cloud Run対応)
 
-このステージの目的は、ステージ1の成果物（`dist` ディレクトリ）を、Cloud Runの要件に合わせたWebサーバー環境に設置することです。
+このステージの目的は、ステージ1の成果物とAPIプロキシサーバーを、単一のコンテナで効率的に実行する環境を構築することです。
 
--   `FROM nginx:stable-alpine`: Nginxがインストールされた軽量なOSイメージを土台にします。
--   `RUN apk add --no-cache gettext`: `envsubst` というコマンドをインストールします。これは、環境変数の値をテンプレートファイルに埋め込むために使います。
--   `COPY nginx.conf.template ...`: Nginxの設定「テンプレート」をコピーします。ポート番号が `${PORT}` というプレースホルダーになっています。
--   `COPY entrypoint.sh ...`: コンテナ起動時に最初に実行されるスクリプトをコピーし、実行権限を与えます。
--   `COPY --from=build /app/dist ...`: ステージ1から成果物である `dist` ディレクトリだけをコピーします。
--   `ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]`: コンテナが起動したときに、`CMD` の代わりにこのスクリプトを実行するように指定します。
+-   `FROM node:18-alpine AS production`: Node.jsがインストールされた軽量なイメージを土台にします。これにより、APIプロキシ (`server.js`) を実行できます。
+-   `RUN apk add --no-cache nginx gettext`: Node.js環境に、Nginxと `envsubst` コマンドを追加でインストールします。
+-   `COPY --from=build ...`: ステージ1から必要なファイルをコピーします。
+    -   `/app/dist`: ビルドされたReactアプリの静的ファイル。Nginxがこれを配信します。
+    -   `/app/node_modules`, `package.json`, `server.js`: Node.jsで書かれたAPIプロキシサーバーを実行するために必要なファイル群です。
+-   `COPY nginx.conf.template ...`, `COPY entrypoint.sh ...`: Nginxの設定テンプレートと、コンテナ起動時に実行されるスクリプトをコピーします。
+-   `ENTRYPOINT [...]`: コンテナ起動時に `entrypoint.sh` を実行するよう指定します。
 
-この結果、最終的なDockerイメージは、Cloud Runの動的なポート割り当てに対応できる、柔軟な構成になります。
+このステージにより、最終的なDockerイメージは「Reactアプリの静的ファイル」「Nginx」「Node.jsプロキシサーバー」を含む、自己完結したパッケージになります。
 
 ---
 
@@ -78,29 +93,52 @@ CMD ["nginx", "-g", "daemon off;"]
 
 Cloud Runでのデプロイで発生したポートのエラーを解決するため、この新しい仕組みが導入されました。
 
-**問題点:** Cloud Runは、起動するコンテナに対して「今回は8080番ポートで通信を受け付けてください」のように、動的にポート番号を指定します。しかし、以前の `nginx.conf` は「80番ポート」で待ち受けるように固定されていたため、Cloud Runはコンテナが正常に起動したことを確認できず、エラーとなっていました。
+**問題点:** Cloud Runは、起動するコンテナに対して「今回は8080番ポートで通信を受け付けてください」のように、`PORT` 環境変数で動的にポート番号を指定します。コンテナ内のアプリケーションは、この指定されたポートでリッスン（待ち受け）する必要があります。以前の構成では、APIプロキシサーバーが起動しておらず、ポートの待ち受け設定も不十分だったため、デプロイに失敗していました。
 
-**解決策:** コンテナが起動する瞬間に、Cloud Runから指定されたポート番号を使って、Nginxの設定ファイルを動的に生成します。
+**解決策:** コンテナ起動時に、NginxとNode.jsプロキシサーバーの両方を起動し、ポート設定を動的に行います。
 
 ### `entrypoint.sh` (起動スクリプト)
 ```sh
 #!/bin/sh
+# Cloud Runから提供されるPORT環境変数をNginx用に設定
 export PORT=${PORT:-8080}
-envsubst '${PORT}' < /etc/nginx/templates/nginx.conf.template > /etc/nginx/conf.d/default.conf
-exec nginx -g 'daemon off;'
+# プロキシサーバーは内部的に3001ポートで動かす
+export PROXY_PORT=3001
+
+# Nginxの設定ファイルを生成
+envsubst '${PORT}' < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf
+
+# プロキシサーバーをバックグラウンドで起動
+node /app/server.js &
+
+# Nginxをフォアグラウンドで起動
+exec nginx -c /etc/nginx/nginx.conf -g 'daemon off;'
 ```
-1.  Cloud Runが設定する `PORT` 環境変数を読み込みます。（もし設定されていなければ、デフォルトで8080を使います）
-2.  `envsubst` コマンドが、`nginx.conf.template` 内の `${PORT}` という文字列を、実際のポート番号（例: `8080`）に置換し、最終的な設定ファイル `/etc/nginx/conf.d/default.conf` を生成します。
-3.  生成された設定ファイルを使って、Nginxサーバーを起動します。
+1.  Cloud Runが設定する `PORT` 環境変数を読み込み、Nginxがリッスンするポートとして設定します。
+2.  `envsubst` コマンドが、`nginx.conf.template` 内の `${PORT}` を実際のポート番号に置換し、最終的な設定ファイル `/etc/nginx/nginx.conf` を生成します。
+3.  `node /app/server.js &`: Node.jsで書かれたAPIプロキシサーバーを **バックグラウンドで** 起動します。末尾の `&` がバックグラウンド実行の指示です。
+4.  `exec nginx ...`: Nginxサーバーを **フォアグラウンドで** 起動します。Cloud Runは、このフォアグラウンドプロセスが動き続けている限り、コンテナが正常だと判断します。
 
 ### `nginx.conf.template` (設定テンプレート)
 ```nginx
 server {
-  listen ${PORT}; # ここが動的に変わる
-  # ...
+    listen ${PORT}; # ここが動的に変わる
+
+    location / {
+        # ... Reactアプリの配信設定 ...
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:3001; # APIリクエストをプロキシへ転送
+        # ...
+    }
 }
 ```
-この仕組みにより、コンテナはCloud Runが期待するポートで正しく待ち受けることができるようになります。
+-   NginxはCloud Runから指定されたポート (`${PORT}`) でリクエストを待ち受けます。
+-   `/api/` で始まるパスへのリクエストは、バックグラウンドで動いているNode.jsプロキシサーバー（ポート3001）に転送（`proxy_pass`）されます。
+-   それ以外のリクエストは、Reactアプリケーションの静的ファイルとして処理されます。
+
+この仕組みにより、単一のコンテナでWebサーバーとAPIプロキシの2つの役割をこなし、Cloud Runの要件を満たすことができます。
 
 ---
 

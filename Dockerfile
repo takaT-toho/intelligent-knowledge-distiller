@@ -16,17 +16,21 @@ RUN --mount=type=secret,id=env_file,dst=.env \
 RUN npm run build
 
 # Production stage
-FROM nginx:stable-alpine
-# envsubstコマンドをインストール
-RUN apk add --no-cache gettext
+FROM node:18-alpine AS production
+WORKDIR /app
+
+# Nginxとgettextをインストール
+RUN apk add --no-cache nginx gettext
+
+# ビルドステージから必要なファイルをコピー
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json .
+COPY --from=build /app/server.js .
 
 # Nginx設定テンプレートと起動スクリプトをコピー
 COPY nginx.conf.template /etc/nginx/templates/nginx.conf.template
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# ビルド成果物をコピー
-COPY --from=build /app/dist /usr/share/nginx/html
-
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-# EXPOSEはENTRYPOINTで動的に設定されるため、ここでは不要
