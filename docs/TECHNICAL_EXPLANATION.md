@@ -106,18 +106,19 @@ export PORT=${PORT:-8080}
 export PROXY_PORT=3001
 
 # Nginxの設定ファイルを生成
-envsubst '${PORT}' < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf
+# /etc/nginx/conf.d/default.conf に書き込むことで、メインのnginx.confから自動で読み込まれる
+envsubst '${PORT}' < /etc/nginx/templates/nginx.conf.template > /etc/nginx/conf.d/default.conf
 
 # プロキシサーバーをバックグラウンドで起動
 node /app/server.js &
 
-# Nginxをフォアグラウンドで起動
-exec nginx -c /etc/nginx/nginx.conf -g 'daemon off;'
+# Nginxをフォアグラウンドで起動 (デフォルトの設定ファイルを読み込む)
+exec nginx -g 'daemon off;'
 ```
-1.  Cloud Runが設定する `PORT` 環境変数を読み込み、Nginxがリッスンするポートとして設定します。
-2.  `envsubst` コマンドが、`nginx.conf.template` 内の `${PORT}` を実際のポート番号に置換し、最終的な設定ファイル `/etc/nginx/nginx.conf` を生成します。
-3.  `node /app/server.js &`: Node.jsで書かれたAPIプロキシサーバーを **バックグラウンドで** 起動します。末尾の `&` がバックグラウンド実行の指示です。
-4.  `exec nginx ...`: Nginxサーバーを **フォアグラウンドで** 起動します。Cloud Runは、このフォアグラウンドプロセスが動き続けている限り、コンテナが正常だと判断します。
+1.  Cloud Runが設定する `PORT` 環境変数を読み込みます。
+2.  `envsubst` コマンドが、`nginx.conf.template` 内の `${PORT}` を実際のポート番号に置換し、最終的な設定ファイルを `/etc/nginx/conf.d/default.conf` に生成します。このパスに置くことで、Nginxのメイン設定から自動的にインクルードされます。
+3.  `node /app/server.js &`: Node.jsで書かれたAPIプロキシサーバーを **バックグラウンドで** 起動します。
+4.  `exec nginx -g 'daemon off;'`: Nginxサーバーを **フォアグラウンドで** 起動します。特定のコンフィグファイルを `-c` で指定せず、デフォルトのパスを読み込ませることで、メイン設定と今回生成した設定の両方が適用されます。
 
 ### `nginx.conf.template` (設定テンプレート)
 ```nginx

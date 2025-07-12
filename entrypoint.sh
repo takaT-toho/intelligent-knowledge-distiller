@@ -6,11 +6,12 @@ export PORT=${PORT:-8080}
 export PROXY_PORT=3001
 
 # Nginxの設定ファイルを生成
-envsubst '${PORT}' < /etc/nginx/templates/nginx.conf.template > /etc/nginx/nginx.conf
+# /etc/nginx/conf.d/default.conf に書き込むことで、メインのnginx.confから自動で読み込まれる
+envsubst '${PORT}' < /etc/nginx/templates/nginx.conf.template > /etc/nginx/conf.d/default.conf
 
 # プロキシサーバーをバックグラウンドで起動
 # server.jsは/appディレクトリにある想定
 node /app/server.js &
 
-# Nginxをフォアグラウンドで起動
-exec nginx -c /etc/nginx/nginx.conf -g 'daemon off;'
+# Nginxをフォアグラウンドで起動 (デフォルトの設定ファイルを読み込む)
+exec nginx -g 'daemon off;'
