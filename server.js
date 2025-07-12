@@ -8,13 +8,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-// Cloud Runから提供されるPORT環境変数を優先的に使用し、なければローカル用に3001をデフォルトとする
 const port = process.env.PORT || 3001;
 
 app.use(express.json());
 app.use(cors());
 
-// APIプロキシ用のルート
+// APIプロキシ用のルートを先に定義
 app.post('/api/openai/chat/completions', async (req, res) => {
     const { baseURL, apiKey, model, messages, response_format } = req.body;
 
@@ -50,19 +49,19 @@ app.post('/api/openai/chat/completions', async (req, res) => {
 // --- 本番環境用の設定 ---
 // NODE_ENVが'production'の場合のみ、静的ファイル配信とフォールバックルートを有効にする
 if (process.env.NODE_ENV === 'production') {
-    // ビルドされたReactアプリの静的ファイルを提供
     const distPath = path.join(__dirname, 'dist');
+
+    // 1. 静的ファイルを提供
     app.use(express.static(distPath));
 
-    // 上記のルートに一致しないすべてのGETリクエストに対してindex.htmlを返す
-    // これにより、React Routerによるクライアントサイドのルーティングが正しく機能する
-    app.get('*', (req, res) => {
+    // 2. API以外のすべてのGETリクエストに対してindex.htmlを返す (フォールバック)
+    // /apiで始まらないすべてのパスにマッチする正規表現を使用し、より安全にフォールバックを実装
+    app.get(/^(?!\/api).*/, (req, res) => {
         res.sendFile(path.join(distPath, 'index.html'));
     });
 }
 
 app.listen(port, () => {
-    // ローカル開発時はViteがポートを知らせるため、本番環境でのみログを出力するとより親切
     if (process.env.NODE_ENV === 'production') {
         console.log(`Server listening on port ${port}`);
     } else {
